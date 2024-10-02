@@ -11,7 +11,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ size, position, video, time }
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            const videoElement = document.querySelector('.video-player');
+            const videoElement = document.querySelector('.image-player');
             if (videoElement) {
                 videoElement.remove();
             }
@@ -20,9 +20,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ size, position, video, time }
         return () => clearTimeout(timer);
     }, [time]);
 
+    if (!video) {
+        return null;
+    }
+    if( size < 1) size = 1;
+
     const calculatedSize = 100 / size;
-    const top = (position / 3) * 100;
-    const left = (position % 3) * 100;
+    const top = (position / size) * 100;
+    const left = (position % size) * 100;
     const style: React.CSSProperties = {
         width: calculatedSize + '%',
         height: calculatedSize + '%',
@@ -32,7 +37,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ size, position, video, time }
     };
 
     return (
-        <div className="video-player" style={style}>
+        <div className="image-player" style={style}>
             <video
                 src={video}
                 style={{ width: '100%', height: '100%' }}
