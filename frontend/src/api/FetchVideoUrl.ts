@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const fetchVideoUrl = async (hash: string): Promise<string | undefined> => {
     try {
-        const response = await axios.get(`http://localhost:3005/video/${hash}`);
+        const response = await axios.get(`http://localhost:3001/video/${hash}`);
         return response.data?.videoUrl;
     } catch (error) {
         const err = error as any;
