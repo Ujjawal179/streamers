@@ -10,6 +10,12 @@ import {config} from 'dotenv';
 import UserRouter from "./router/userRouter";
 config();
 const port=3001
+const redisClient = createClient({
+  url: 'redis://localhost:6379' // or use Redis Cloud URL
+});
+
+// Connect to Redis
+redisClient.connect().catch(console.error);
 
 // Create a new express application
 const app = express();
@@ -35,8 +41,9 @@ app.post('/upload', async (req, res) => {
       // Here you would typically save the hash to your database
       // For example:
       // await saveHashToDatabase(hash);
-      
-      console.log("Received hash:", hash);
+      const user_id= "1"
+      // console.log("Received hash:", hash);
+      redisClient.rPush(`user:${user_id}:videos`, hash)
       res.json({ message: 'Hash received and saved successfully' });
   } catch (error) {
       console.error('Error saving hash:', error);
