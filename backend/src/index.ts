@@ -50,6 +50,27 @@ app.post('/upload', async (req, res) => {
       res.status(500).json({ message: 'Failed to save hash' });
   }
 });
+
+//redis lpop endpoints
+app.get('/user/:user_id/videos', async (req, res) => {
+  const { user_id } = req.params;
+  if (!user_id) {
+      return res.status(400).json({ message: 'No user_id provided' });
+  }
+
+  try {
+    const hash= await redisClient.lPop(`user:${user_id}:video`);
+    if (!hash) {
+      return res.status(404).json({ message: 'No hashes available' });
+    }
+    res.json({ hash });
+     
+
+  } catch (error) {
+      console.error('Error retrieving hashes:', error);
+      res.status(500).json({ message: 'Failed to retrieve hashes' });
+  }
+});
 // Define a route to handle POST requests at the "/api/echo" path
 app.listen(port, () =>{
     console.log(`Server is running at http://localhost:${port}`);
