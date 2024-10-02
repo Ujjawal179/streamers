@@ -6,8 +6,39 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+
+model Youtuber {
+  id          String @id @default(uuid())
+  name        String
+  email String  
+  password String
+
+ 
+  videos      ads[]
+}
+
+model ads {
+  id         String    @id @default(uuid())
+  duration   Int
+  createdAt  DateTime  @default(now())
+  size       Int
+  position   Int
+  status     AdsStatus
+  youtuberId String
+  youtuber   Youtuber  @relation(fields: [youtuberId], references: [id])
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id])
+}
+
+model Company {
+  id          String @id @default(uuid())
+  name        String
+  description String
+
+  ads ads[]
+}
+
+enum AdsStatus {
+  Ended
+  queued
 }

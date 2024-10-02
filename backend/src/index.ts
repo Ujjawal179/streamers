@@ -1,10 +1,16 @@
 import express from "express";
 import cors from "cors";
+
 import multer from 'multer';
 import PinataClient  from '@pinata/sdk';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+import UserRouter from "./router/userRouter";
+
+const port=3001
+
 // Create a new express application
 const app = express();
 app.use(express.json());
@@ -14,19 +20,23 @@ app.get("/", (req, res) => {
   // Send a JSON response with the message "Hello, World!"
   res.json({ message: "Hello, World!" });
 });
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const _dirname = path.dirname(__filename);
 const pinata = new PinataClient(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
 const upload = multer({ dest: 'uploads/' }); // Temporary storage for uploaded files
 
+app.use('/api/v1', UserRouter);
 // Endpoint to handle video uploads
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
     
-    // const filePath = path.join(__dirname, req.file.path);
-    const filePath = path.join(__dirname, 'uploads', req.file.filename);
+    // const filePath = path.join(_dirname, req.file.path);
+    const filePath = path.join(_dirname, 'uploads', req.file.filename);
     
+
+
+
 
     try {
         const hash = await uploadVideoToPinata(filePath);
@@ -62,3 +72,6 @@ async function uploadVideoToPinata(filePath: string) {
 }
 }
 // Define a route to handle POST requests at the "/api/echo" path
+app.listen(port, () =>{
+    console.log(`Server is running at http://localhost:${port}`);
+  });
