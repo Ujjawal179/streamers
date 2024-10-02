@@ -43,7 +43,7 @@ app.post('/upload', async (req, res) => {
       // await saveHashToDatabase(hash);
       const user_id= "1"
       // console.log("Received hash:", hash);
-      redisClient.rPush(`user:${user_id}:videos`, hash)
+      redisClient.rPush(`user:${user_id}:video`, hash)
       res.json({ message: 'Hash received and saved successfully' });
   } catch (error) {
       console.error('Error saving hash:', error);
@@ -52,8 +52,8 @@ app.post('/upload', async (req, res) => {
 });
 
 //redis lpop endpoints
-app.get('/user/:user_id/videos', async (req, res) => {
-  const { user_id } = req.params;
+app.get('/user/1/videos', async (req, res) => {
+  const user_id  = 1;
   if (!user_id) {
       return res.status(400).json({ message: 'No user_id provided' });
   }
@@ -63,7 +63,8 @@ app.get('/user/:user_id/videos', async (req, res) => {
     if (!hash) {
       return res.status(404).json({ message: 'No hashes available' });
     }
-    res.json({ hash });
+    console.log("success",hash)
+    res.json({ video:`https://gateway.pinata.cloud/ipfs/${hash}` });
      
 
   } catch (error) {

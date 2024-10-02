@@ -25,7 +25,7 @@ const Player = ({ type, size, position, media, time }: PlayerProps) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('YOUR_API_ENDPOINT');
+                const response = await axios.get('http://localhost:3001/user/1/videos');
                 setPlayerData(response.data);
             } catch (error) {
                 console.error('Error fetching player data:', error);
