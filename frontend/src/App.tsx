@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Player from './pages/Player/Player';
 import SetupAd from './pages/SetupAd/SetupAd';
 import UploadAd from './pages/UploadAd/UploadAd';
+import Login from './pages/Login/Login';
+import SignUp from './pages/SignUp/SignUp';
 import React from 'react';
 
 const App: React.FC = () => {
@@ -26,6 +28,8 @@ const App: React.FC = () => {
           />
           <Route path="/upload/:id" element={<UploadAd />} />
           <Route path="/setup" element={<SetupAd />} />
+          <Route path="/login" element={<Login/>} />
+          <Route path="/signup" element={<SignUp/>} />
           <Route path="*" element={<h1>404 Not Found</h1>} />
         </Routes>
       </Router>

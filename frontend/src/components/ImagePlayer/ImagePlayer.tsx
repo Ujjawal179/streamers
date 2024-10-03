@@ -39,7 +39,7 @@ const ImagePlayer: React.FC<ImagePlayerProps> = ({ size, position, image, time }
 
     const calculatedSize = 100 / size;
     const top = Math.floor((position -1 )/ size) * 100/size;
-    const left = (position % size)/size * 100;
+    const left = ((position-1) % size)/size * 100;
     const style: React.CSSProperties = {
         position: 'absolute',
         width: `${calculatedSize}%`,

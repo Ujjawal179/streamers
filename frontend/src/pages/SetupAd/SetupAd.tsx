@@ -4,7 +4,7 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
-import ImagePlayer from '../../components/ImagePlayer/ImagePlayer';
+import PlayerPreview from '../../components/PlayerPreview/PlayerPreview';
 
 const SetupAd: React.FC = () => {
     const [size, setSize] = React.useState<number>(0);
@@ -62,7 +62,7 @@ const SetupAd: React.FC = () => {
             </FormControl>
 
             {size > 0 && (
-                <ImagePlayer size={size} position={position} image="https://indianmediastudies.com/wp-content/uploads/2023/11/what-is-advertising-copy.jpeg" time={-1} />
+                <PlayerPreview size={size} position={position}  />
             )}
 
         </>
