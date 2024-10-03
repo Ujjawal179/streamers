@@ -59,19 +59,39 @@ app.get('/user/1/videos', async (req, res) => {
   }
 
   try {
-    const hash= await redisClient.lPop(`user:${user_id}:video`);
+    // const hash = await redisClient.lIndex(`user:${user_id}:video`, 0);
+    const hash = await redisClient.lPop(`user:${user_id}:video`);
+
+    console.log("success", hash);
     if (!hash) {
       return res.status(404).json({ message: 'No hashes available' });
     }
-    console.log("success",hash)
-    res.json({ video:`https://gateway.pinata.cloud/ipfs/${hash}` });
-     
-
+    res.json({ video: `https://gateway.pinata.cloud/ipfs/${hash}` });
   } catch (error) {
       console.error('Error retrieving hashes:', error);
       res.status(500).json({ message: 'Failed to retrieve hashes' });
   }
 });
+// app.get('/user/1/videos', async (req, res) => {
+//   const user_id  = 1;
+//   if (!user_id) {
+//       return res.status(400).json({ message: 'No user_id provided' });
+//   }
+
+//   try {
+//     const hash= await redisClient.lIndex(`user:${user_id}:video`,0);
+//     console.log("success",hash)
+//     if (!hash) {
+//       return res.status(404).json({ message: 'No hashes available' });
+//     }
+//     res.json({ video:`https://gateway.pinata.cloud/ipfs/${hash}` });
+     
+
+//   } catch (error) {
+//       console.error('Error retrieving hashes:', error);
+//       res.status(500).json({ message: 'Failed to retrieve hashes' });
+//   }
+// });
 // Define a route to handle POST requests at the "/api/echo" path
 app.listen(port, () =>{
     console.log(`Server is running at http://localhost:${port}`);
