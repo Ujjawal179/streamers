@@ -30,8 +30,12 @@ app.use('/api/v1', UserRouter);
 
 
 
-app.post('/upload', async (req, res) => {
+app.post('/upload/:userId', async (req, res) => {
   const { hash } = req.body;
+  const user_id  = req.params.userId;
+  if (!user_id) {
+      return res.status(400).json({ message: 'No user_id provided' });
+  }
   
   if (!hash) {
       return res.status(400).json({ message: 'No hash provided' });
@@ -41,7 +45,7 @@ app.post('/upload', async (req, res) => {
       // Here you would typically save the hash to your database
       // For example:
       // await saveHashToDatabase(hash);
-      const user_id= "1"
+    
       // console.log("Received hash:", hash);
       redisClient.rPush(`user:${user_id}:video`, hash)
       res.json({ message: 'Hash received and saved successfully' });
@@ -52,8 +56,8 @@ app.post('/upload', async (req, res) => {
 });
 
 //redis lpop endpoints
-app.get('/user/1/videos', async (req, res) => {
-  const user_id  = 1;
+app.get('/user/:userId/videos', async (req, res) => {
+  const user_id  = req.params.userId;
   if (!user_id) {
       return res.status(400).json({ message: 'No user_id provided' });
   }
