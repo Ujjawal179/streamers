@@ -52,6 +52,8 @@ const UploadAd: React.FC = () => {
     };
 
     return (
+        <>
+        <div style={{minHeight:'100vh'}}>
         <Box sx={{ p: 3 }}>
             <Typography variant="h4" gutterBottom>
                 Upload Your Advertisement for Streamer: {id}
@@ -138,6 +140,33 @@ const UploadAd: React.FC = () => {
                 </Button>
             </FormControl>
         </Box>
+        </div>
+        <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#3a76d6" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', minHeight:'100vh'}}>
+            <h1 style={{textAlign:'center', padding:'20px'}}>Know More about streamer!!</h1>
+            <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
+                    <img src="https://yt3.googleusercontent.com/aeR0gGkDfPbQqy8QgJHUJ6D7LArHl-PZP0TUX_fozFhpvlJIXb2MPoWrJfiLL1vdUaMwXCfr=s900-c-k-c0x00ffffff-no-rj" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'60%' , objectFit: 'cover'}}/>
+                <div className="details" style={{maxWidth:'450px', margin:'30px', width:"60%"}}>
+                    <div className="name">
+                        <h2 style={{textAlign:"center"}}>Streamer Name</h2>
+                    </div>
+                    <div className="desc">
+                        <p>Streamer Description: Lorem ipsum dolor sit amet consectetur adipisicing elit. Sunt commodi qui ducimus? Libero corrupti ea placeat perspiciatis sint nam. Explicabo consectetur ducimus reprehenderit ullam quidem iste sit cumque perspiciatis sequi!</p>
+                    </div>
+                    <div className="channels">
+                        <h3>Channels</h3>
+                        <div className="channel">
+                            <h4>Channel 1</h4>
+                            <p>Channel 1 description</p>
+                        </div>
+                        <div className="channel">
+                            <h4>Channel 2</h4>
+                            <p>Channel 2 description</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </>
     );
 };
 

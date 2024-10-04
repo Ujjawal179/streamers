@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import FormControl from '@mui/material/FormControl';
-import { TextField, Button } from '@mui/material';
+import { TextField, Button, Grid, ToggleButton, ToggleButtonGroup, Box } from '@mui/material';
+import PhoneInput from 'react-phone-number-input';
 import { loginUser } from '../../api/userService';
 
 function Login() {
@@ -9,8 +9,8 @@ function Login() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPhone(e.target.value);
+    const handlePhoneChange = (value?: string) => {
+        setPhone(value || '');
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,29 +34,43 @@ function Login() {
     };
 
     return(
-        <>
-            <FormControl variant="standard" fullWidth sx={{ mb: 2 }}>
-                <TextField
-                    id="phone-number"
-                    label="Phone Number"
-                    variant="standard"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                />
-                <TextField
-                    id="Password"
-                    label="Password"
-                    type="password"
-                    variant="standard"
-                    value={password}
-                    onChange={handlePasswordChange}
-                />
-            </FormControl>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
-                Log In
-            </Button>
-        </>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" padding={'10px'}>
+            <Grid container spacing={3} justifyContent="center" alignItems="center" >
+                {window.innerWidth > 600 && (
+                    <Grid item xs={12} sm={6} md={4}>
+                        <img src={'/creator.png'} alt="Sign Up" style={{ width: '100%', height: 'auto' }} />
+                    </Grid>
+                )}
+                <Grid item xs={12} sm={6} md={4}>
+                    <Box display="flex" flexDirection="column" >
+                        <h1 className='heading'>Welcome Back!!</h1>
+                        <span>If you don't have an account, <a href="/signup" style={{textDecoration:"none"}}>Sign Up</a>, else Log In to continue!</span>
+                        <PhoneInput
+                            international
+                            countryCallingCodeEditable={false}
+                            defaultCountry="IN"
+                            value={phone}
+                            onChange={(value) => handlePhoneChange(value)}
+                            style={{ margin: '10px', marginTop: '20px' }}
+                        />
+                        <TextField
+                            id="password"
+                            label="Password"
+                            type="password"
+                            variant="standard"
+                            value={password}
+                            onChange={handlePasswordChange}
+                            style={{ margin: '10px' }}
+                            fullWidth
+                        />
+                        {error && <p style={{ color: 'red' }}>{error}</p>}
+                        <Button variant="contained" color="primary" onClick={handleSubmit} style={{ marginTop: '20px' }}>
+                            Sign Up
+                        </Button>
+                    </Box>
+                </Grid>
+            </Grid>
+        </Box>
     );
 }
 
