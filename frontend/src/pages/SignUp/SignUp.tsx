@@ -46,7 +46,7 @@ const SignUp: React.FC = () => {
     };
 
     return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" padding={'10px'}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="90vh" padding={'10px'}>
             <Grid container spacing={3} justifyContent="center" alignItems="center" >
                 {window.innerWidth > 600 && (
                     <Grid item xs={12} sm={6} md={4}>
