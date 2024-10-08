@@ -185,9 +185,9 @@ const UploadAd: React.FC = () => {
         </Box>
         </div>
         <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', minHeight:'100vh'}}>
-            <h1 style={{textAlign:'center', padding:'20px'}}>Know More about streamer!!</h1>
+            <h2 style={{textAlign:'center', padding:'5px'}}>Know More about streamer!!</h2>
             <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
-                    <img src="https://yt3.googleusercontent.com/aeR0gGkDfPbQqy8QgJHUJ6D7LArHl-PZP0TUX_fozFhpvlJIXb2MPoWrJfiLL1vdUaMwXCfr=s900-c-k-c0x00ffffff-no-rj" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
+                    <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
                 <div className="details" style={{ maxWidth: '450px', width: '60%', margin: '5px' }}>
                     <div className="name">
                         <h2 style={{ textAlign: 'center' }}>Streamer Name</h2>

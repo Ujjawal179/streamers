@@ -1,26 +1,38 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface VideoPlayerProps {
     video: string;
+    onVideoEnd?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ video }) => {
+const VideoPlayer = ({ video, onVideoEnd }: VideoPlayerProps) => {
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement && onVideoEnd) {
+            videoElement.addEventListener('ended', onVideoEnd);
+        }
+
+        return () => {
+            if (videoElement && onVideoEnd) {
+                videoElement.removeEventListener('ended', onVideoEnd);
+            }
+        };
+    }, [onVideoEnd]);
+
     return (
-        <>
-        {video && (
-            <div>
-                <h2>Video Preview:</h2>
-                <video width="600" controls>
-                    <source src={video} type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-        )}
-        </>
+        <div style={{display:'flex', justifyContent:'center'}}>
+            <video ref={videoRef} height="100%" autoPlay>
+                <source src={video} type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+        </div>
     );
 };
 
 export default VideoPlayer;
+
 
 // import React, { useEffect } from 'react';
 

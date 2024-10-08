@@ -12,33 +12,39 @@ import Navbar from './components/Navbar/Navbar';
 
 const App: React.FC = () => {
   return (
-    <>
-      <Navbar />
-      <Router>
-        <Routes>
-          {/* <Route path="/" element={<Home />} /> */}
-          <Route 
-            path="/player" 
-            element={
-              <Player 
-                type="video" 
-                size={1} 
-                position={1} 
-                media="media-url" 
-                time={120} 
-              />
-            } 
-          />
-          <Route path="/" element={<Home/>} />
-          <Route path="/upload/:id" element={<UploadAd />} />
-          <Route path="/setup" element={<SetupAd />} />
-          <Route path="/login" element={<Login/>} />
-          <Route path="/signup" element={<SignUp/>} />
-          <Route path="*" element={<h1>404 Not Found</h1>} />
-        </Routes>
-      </Router>
-      <Footer />
-    </>
+    <Router>
+      <Routes>
+        <Route 
+          path="/player" 
+          element={
+            <Player 
+              type="video" 
+              size={1} 
+              position={1} 
+              media="media-url" 
+              time={120} 
+            />
+          } 
+        />
+        <Route 
+          path="*" 
+          element={
+            <>
+              <Navbar />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/upload/:id" element={<UploadAd />} />
+                <Route path="/setup" element={<SetupAd />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="*" element={<h1>404 Not Found</h1>} />
+              </Routes>
+              <Footer />
+            </>
+          } 
+        />
+      </Routes>
+    </Router>
   );
 }
 
