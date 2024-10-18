@@ -49,7 +49,7 @@ const UploadAd: React.FC = () => {
     const handleSubmit = async () => {
         if (file) {
             try {
-                await uploadMedia(file);
+                await uploadMedia(file,"1");
                 alert("Media uploaded successfully!");
             } catch (error) {
                 alert("Failed to upload media. Please try again.");

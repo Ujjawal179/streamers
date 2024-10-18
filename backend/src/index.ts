@@ -21,6 +21,22 @@ const redisClient = createClient({
 
 // Connect to Redis
 redisClient.connect().catch(console.error);
+function generateCloudinarySignature(timestamp:any) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary configuration is incomplete. Please check your environment variables.');
+  }
+
+  const stringToSign = `timestamp=${timestamp}`;
+  
+  return crypto
+    .createHmac('sha256', apiSecret)
+    .update(stringToSign)
+    .digest('hex');
+}
 
 // Create a new express application
 const app = express();
@@ -34,45 +50,45 @@ app.get("/", (req, res) => {
 app.use('/api/v1', UserRouter);
 
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID ||"",
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// const razorpay = new Razorpay({
+//   key_id: process.env.RAZORPAY_KEY_ID ||"",
+//   key_secret: process.env.RAZORPAY_KEY_SECRET ||"",
+// });
 
-// Endpoint for creating a payment order
-app.post('/create-payment', async (req, res) => {
-  const { companyId, youtuberId, amount } = req.body;
+// // Endpoint for creating a payment order
+// app.post('/create-payment', async (req, res) => {
+//   const { companyId, youtuberId, amount } = req.body;
 
-  try {
-    const paymentOrder = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
-      currency: 'INR',
-      receipt: `receipt_${youtuberId}_${companyId}`,
-      payment_capture: true // Auto-capture payment
+//   try {
+//     const paymentOrder = await razorpay.orders.create({
+//       amount: amount * 100, // amount in paise
+//       currency: 'INR',
+//       receipt: `receipt_${youtuberId}_${companyId}`,
+//       payment_capture: true // Auto-capture payment
 
-    });
+//     });
 
-     await prisma.payment.create({
-      data: {
-        companyId,
-        youtuberId,
-        amount,
-        orderId: paymentOrder.id,
-        status: 'created',
-      },
-    });
+//      await prisma.payment.create({
+//       data: {
+//         companyId,
+//         youtuberId,
+//         amount,
+//         orderId: paymentOrder.id,
+//         status: 'created',
+//       },
+//     });
     
 
-    res.json({
-      orderId: paymentOrder.id,
-      amount: amount,
-      currency: 'INR',
-    });
-  } catch (error) {
-    console.error('Error creating payment order:', error);
-    res.status(500).json({ message: 'Failed to create payment order' });
-  }
-});
+//     res.json({
+//       orderId: paymentOrder.id,
+//       amount: amount,
+//       currency: 'INR',
+//     });
+//   } catch (error) {
+//     console.error('Error creating payment order:', error);
+//     res.status(500).json({ message: 'Failed to create payment order' });
+//   }
+// });
 
 // Endpoint for verifying and updating payment status
 app.post('/verify-payment', async (req, res) => {
@@ -268,28 +284,66 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
 //       res.status(500).json({ message: 'Failed to save hash' });
 //   }
 // });
+app.post('/upload/:userId', async (req, res) => {
+  const { url, public_id, resource_type } = req.body;
+  const user_id = req.params.userId;
 
-//redis lpop endpoints
-app.get('/user/:userId/videos', async (req, res) => {
-  const user_id  = req.params.userId;
   if (!user_id) {
-      return res.status(400).json({ message: 'No user_id provided' });
+    return res.status(400).json({ message: 'No user_id provided' });
+  }
+
+  if (!url) {
+    return res.status(400).json({ message: 'No URL provided' });
   }
 
   try {
-    // const hash = await redisClient.lIndex(`user:${user_id}:video`, 0);
-    const hash = await redisClient.lPop(`user:${user_id}:video`);
+    const videoData = {
+      url,
+      public_id: public_id || null,
+      resource_type: resource_type || 'video',
+      uploaded_at: new Date().toISOString(),
+    };
 
-    console.log("success", hash);
-    if (!hash) {
-      return res.status(404).json({ message: 'No hashes available' });
-    }
-    res.json({ video: `https://gateway.pinata.cloud/ipfs/${hash}` });
+    // Save the Cloudinary data in Redis
+    await redisClient.rPush(`user:${user_id}:videos`, JSON.stringify(videoData));
+
+    res.json({ message: 'URL received and saved successfully', data: videoData });
   } catch (error) {
-      console.error('Error retrieving hashes:', error);
-      res.status(500).json({ message: 'Failed to retrieve hashes' });
+    console.error('Error saving Cloudinary data:', error);
+    res.status(500).json({ message: 'Failed to save Cloudinary data' });
   }
 });
+
+// Route for retrieving the latest video
+app.get('/user/:userId/videos', async (req, res) => {
+  const user_id = req.params.userId;
+
+  if (!user_id) {
+    return res.status(400).json({ message: 'No user_id provided' });
+  }
+
+  try {
+    const videoData = await redisClient.lPop(`user:${user_id}:videos`);
+
+    if (!videoData) {
+      return res.status(404).json({ message: 'No videos available' });
+    }
+
+    const parsedVideoData = JSON.parse(videoData);
+    res.json({ video: parsedVideoData });
+  } catch (error) {
+    console.error('Error retrieving video data:', error);
+    res.status(500).json({ message: 'Failed to retrieve video data' });
+  }
+});
+
+// New route for generating Cloudinary signature
+app.get('/get-signature', (req, res) => {
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const signature = generateCloudinarySignature(timestamp);
+  res.json({ signature, timestamp });
+});
+
 // app.get('/user/1/videos', async (req, res) => {
 //   const user_id  = 1;
 //   if (!user_id) {
@@ -322,56 +376,3 @@ app.listen(port, () =>{
 
 
 
-
-
-// const __dirname = path.dirname(new URL(import.meta.url).pathname);
-// const pinata = new PinataClient(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
-// const upload = multer({ dest: 'uploads/' });
-
-// app.post('/upload', upload.single('file'), async (req, res) => {
-//     if (!req.file) {
-//         return res.status(400).json({ message: 'No file uploaded' });
-//     }
-//     console.log("received file:", req.file);
-
-//     const filePath = path.join(__dirname, req.file.path);
-//     console.log("File path:", filePath);
-
-//     try {
-//         const hash = await uploadVideoToPinata(filePath);
-//         console.log("Pinata hash:", hash);
-//         res.json({ hash });
-//     } catch (error: unknown) {
-//         let errorMessage = 'Failed to upload video to Pinata';
-//         if (error instanceof Error) {
-//             errorMessage += `: ${error.message}`;
-//         }
-//         res.status(500).json({ message: errorMessage });
-//     } finally {
-//         fs.unlink(filePath, (err) => {
-//             if (err) console.error("Error deleting file:", err);
-//         });
-//     }
-// });
-
-// async function uploadVideoToPinata(filePath: string) {
-//     try {
-//         const readableStreamForFile = fs.createReadStream(filePath);
-//         const options = {
-//             pinataMetadata: {
-//                 name: path.basename(filePath),
-//             },
-//         };
-//         console.log("Uploading to Pinata...");
-
-//         const result = await pinata.pinFileToIPFS(readableStreamForFile, options);
-//         console.log("Pinata result:", result);
-//         return result.IpfsHash;
-//     } catch (error: unknown) {
-//         if (error instanceof Error) {
-//             throw new Error('Error uploading file to Pinata: ' + error.message);
-//         } else {
-//             throw new Error('Error uploading file to Pinata: ' + String(error));
-//         }
-//     }
-// }
