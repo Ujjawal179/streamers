@@ -9,18 +9,34 @@ datasource db {
 
 model Youtuber {
   id          String @id @default(uuid())
-  name        String
-  email String  @unique
-  password String
-
+  name        String?
+  email       String  @unique
+  password    String
+  ifsc        String?
+  accountNumber String?
+  channelLink String?
+  payment Payment[]
 }
-
-
 
 model Company {
   id          String @id @default(uuid())
   name        String
-  description String
-  email String  @unique
-  password String
+  description String?
+  email       String  @unique
+  password    String
+  payment Payment[]
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  companyId   String
+  youtuberId  String
+  amount      Int
+  currency    String   @default("INR")
+  status      String
+  orderId     String   @unique
+  paymentId   String?  @unique
+  company     Company  @relation(fields: [companyId], references: [id])
+  youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
+  createdAt   DateTime @default(now())
 }
