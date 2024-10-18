@@ -1,37 +1,34 @@
 import React, { useState } from 'react';
 import { TextField, Button, Grid, ToggleButton, ToggleButtonGroup, Box } from '@mui/material';
-import PhoneInput from 'react-phone-number-input';
 import { loginUser } from '../../api/userService';
 
 function Login() {
     
-    const [phone, setPhone] = useState('');
+    const [mail, setMail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    const handlePhoneChange = (value?: string) => {
-        setPhone(value || '');
+    const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setMail(e.target.value);
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if ( !phone || !password) {
-            setError('All fields are required');
-            return;
+    
+        const result = await loginUser({ mail, password });
+    
+        if (result.success) {
+          // Redirect to another page, like the dashboard
+          window.location.href = '/'; // You can use React Router to navigate instead
+        } else {
+          // Display the error message
+          setError(result.message);
         }
-        try {
-            const response = await loginUser({ phone, password });
-            console.log('User logged in successfully:', response);
-            // Handle successful login (e.g., redirect, display message)
-        } catch (error: any) {
-            console.error('Error logging in:', error);
-            setError(error.message || 'An error occurred');
-        }
-    };
+      };
 
     return(
         <Box display="flex" flexWrap='wrap-reverse' justifyContent="center" alignItems="center" minHeight="90vh" padding={'10px'}>
@@ -45,13 +42,15 @@ function Login() {
                     <Box display="flex" flexDirection="column" >
                         <h1 className='heading'>Welcome Back!!</h1>
                         <span>If you don't have an account, <a href="/signup" style={{textDecoration:"none"}}>Sign Up</a>, else Log In to continue!</span>
-                        <PhoneInput
-                            international
-                            countryCallingCodeEditable={false}
-                            defaultCountry="IN"
-                            value={phone}
-                            onChange={(value) => handlePhoneChange(value)}
-                            style={{ margin: '10px', marginTop: '20px' }}
+                        <TextField
+                            id="mail"
+                            label="Mail"
+                            type="mail"
+                            variant="standard"
+                            value={mail}
+                            onChange={handleMailChange}
+                            style={{ margin: '10px' }}
+                            fullWidth
                         />
                         <TextField
                             id="password"
@@ -64,9 +63,11 @@ function Login() {
                             fullWidth
                         />
                         {error && <p style={{ color: 'red' }}>{error}</p>}
-                        <Button variant="contained" color="primary" onClick={handleSubmit} style={{ marginTop: '20px' }}>
-                            Sign Up
-                        </Button>
+                        <form onSubmit={handleSubmit}>
+                            <Button variant="contained" color="primary" type="submit" style={{ marginTop: '20px' }}>
+                                Sign Up
+                            </Button>
+                        </form>
                     </Box>
                 </Grid>
             </Grid>

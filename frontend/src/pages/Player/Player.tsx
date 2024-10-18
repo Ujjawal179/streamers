@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
 import axios from 'axios';
+import { useParams } from 'react-router-dom';
 
 interface PlayerProps {
     type: 'image' | 'video';
@@ -15,6 +16,7 @@ interface PlayerData {
 }
 
 const Player = ({ type, size, position, media, time }: PlayerProps) => {
+    const { id } = useParams<{ id: string }>();
     const [playerData, setPlayerData] = useState<PlayerData>({ video: '' });
     const [isVideoEnded, setIsVideoEnded] = useState(false);
     const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -23,7 +25,7 @@ const Player = ({ type, size, position, media, time }: PlayerProps) => {
     // Fetch player data (video)
     const fetchData = async () => {
         try {
-            const response = await axios.get('http://localhost:3001/user/1/videos');
+            const response = await axios.get(`http://localhost:3001/user/${id}/videos`);
             setPlayerData(response.data);
             setIsVideoEnded(false); // Reset when a new video is fetched
         } catch (error) {

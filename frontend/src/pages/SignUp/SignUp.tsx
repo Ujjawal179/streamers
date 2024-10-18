@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { TextField, Button, Grid, ToggleButton, ToggleButtonGroup, Box } from '@mui/material';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import { signupUser } from '../../api/userService';
+import { registerUser, signupUser } from '../../api/userService';
 
 const SignUp: React.FC = () => {
     const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
+    const [mail, setMail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('Creator');
     const [error, setError] = useState<string | null>(null);
@@ -15,31 +15,26 @@ const SignUp: React.FC = () => {
         setName(e.target.value);
     };
 
-    const handlePhoneChange = (value?: string) => {
-        setPhone(value || '');
+    const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setMail(e.target.value);
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!name || !phone || !password) {
-            setError('All fields are required');
-            return;
-        }
+    
         try {
-            const response = await signupUser({ role, name, phone, password });
-            console.log('User signed up successfully:', response);
-            // Handle successful signup (e.g., redirect, display message)
+          const result = await registerUser({role, name, mail, password});
+          setError(null);
         } catch (error: any) {
-            console.error('Error signing up:', error);
-            setError(error.message || 'An error occurred');
+          setError(error.message);
         }
     };
 
-    const handleRoleChange = (event: React.MouseEvent<HTMLElement>, newRole: string) => {
+    const handleRoleChange = (event: React.MouseEvent<HTMLElement>, newRole: string | null) => {
         if (newRole !== null) {
             setRole(newRole);
         }
@@ -81,13 +76,15 @@ const SignUp: React.FC = () => {
                             style={{ margin: '10px' }}
                             fullWidth
                         />
-                        <PhoneInput
-                            international
-                            countryCallingCodeEditable={false}
-                            defaultCountry="IN"
-                            value={phone}
-                            onChange={handlePhoneChange}
-                            style={{ margin: '10px', marginTop: '20px' }}
+                        <TextField
+                            id="mail"
+                            label="Mail"
+                            type="mail"
+                            variant="standard"
+                            value={mail}
+                            onChange={handleMailChange}
+                            style={{ margin: '10px' }}
+                            fullWidth
                         />
                         <TextField
                             id="password"
@@ -100,9 +97,11 @@ const SignUp: React.FC = () => {
                             fullWidth
                         />
                         {error && <p style={{ color: 'red' }}>{error}</p>}
-                        <Button variant="contained" color="primary" onClick={handleSubmit} style={{ marginTop: '20px' }}>
-                            Sign Up
-                        </Button>
+                        <form onSubmit={handleSubmit}>
+                            <Button variant="contained" color="primary" type="submit" style={{ marginTop: '20px' }}>
+                                Sign Up
+                            </Button>
+                        </form>
                     </Box>
                 </Grid>
             </Grid>

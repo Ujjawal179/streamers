@@ -1,13 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-    InputLabel,
-    MenuItem,
     FormControl,
     Button,
-    Select,
-    SelectChangeEvent,
-    Slider,
     Box,
     Typography,
 } from "@mui/material";
@@ -15,43 +10,41 @@ import { uploadMedia } from "../../api/UploadMedia";
 
 const UploadAd: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [size, setSize] = React.useState<number>(0);
-    const [position, setPosition] = React.useState<number>(0);
-    const [timeDuration, setTimeDuration] = React.useState<number>(10);
-    const [file, setFile] = React.useState<File | null>(null);
-    const [isHovered, setIsHovered] = React.useState<boolean>(false);
-
-    const handleSizeChange = (event: SelectChangeEvent<number>) => {
-        setSize(Number(event.target.value));
-    };
-
-    const handlePositionChange = (event: SelectChangeEvent<number>) => {
-        setPosition(Number(event.target.value));
-    };
-
-    const handleTimeDurationChange = (event: Event, value: number | number[]) => {
-        setTimeDuration(Array.isArray(value) ? value[0] : value);
-    };
+    const [file, setFile] = useState<File | null>(null);
+    const [isHovered, setIsHovered] = useState<boolean>(false);
+    const [videoDuration, setVideoDuration] = useState<number | null>(null); // State for video duration
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const droppedFile = e.dataTransfer.files[0];
         if (droppedFile) {
           setFile(droppedFile);
+          extractVideoDuration(droppedFile); // Extract duration when file is dropped
         }
-        setIsHovered(false); // Reset hover state on drop
-      };
+        setIsHovered(false);
+    };
     
-      const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-      };
+    };
 
-      const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const uploadedFile = e.target.files?.[0];
         if (uploadedFile) {
           setFile(uploadedFile);
+          extractVideoDuration(uploadedFile); // Extract duration when file is uploaded
         }
-      };
+    };
+
+    // Function to extract video duration
+    const extractVideoDuration = (file: File) => {
+        const videoElement = document.createElement("video");
+        videoElement.src = URL.createObjectURL(file);
+
+        videoElement.onloadedmetadata = () => {
+            setVideoDuration(videoElement.duration);
+        };
+    };
 
     const handleSubmit = async () => {
         if (file) {
@@ -67,124 +60,78 @@ const UploadAd: React.FC = () => {
     };
 
     const handleDragEnter = () => {
-        setIsHovered(true); // Set hover state when user drags over
-      };
-    
+        setIsHovered(true);
+    };
+
     const handleDragLeave = () => {
-        setIsHovered(false); // Reset hover state when user leaves the area
-      };
+        setIsHovered(false);
+    };
+
     return (
         <>
-        <div style={{minHeight:'100vh'}}>
-        <Box sx={{ p: { xs: 1, sm: 2, md: 3, lg: 4 } }}>
-            <Typography variant="h4" gutterBottom>
-                Upload Your Advertisement for Streamer: {id}
-            </Typography>
-            <FormControl variant="standard" fullWidth>
-                <Box
-                    sx={{
-                        margin: "auto",
-                        textAlign: "center",
-                        width: "60%",
-                        border: "2px dashed #ccc",
-                        borderRadius: "20px",
-                        height: "250px",
-                        minWidth: "300px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        mb: 2,
-                        backgroundColor: isHovered ? "grey" : "#fff", // Dark background on hover
-                        color: isHovered ? "#fff" : "#000", // White text on hover
-                        transition: "background-color 0.3s ease", // Smooth transition
-                    }}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                >
-                  {file ? (
-                    <div style={{ marginTop: "10px", position:'absolute', width:'50%', textAlign:'center' }}>
-                        <p>{isHovered ? "Drop it like it's hot!" : `Uploaded file: ${file.name}`}</p>
-                    </div>
-                  ) : (
-                    <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        position: "absolute",
-                        }}>
-                            {isHovered ? null : <img src="/dropfile.png" alt="Drop file here" style={{height:'150px', paddingTop:'15px'}}/> }
-                            <p>{isHovered ? "Drop it like it's hot!" : "Drag and drop a file here or click to upload"}</p>
-                    </div>
-                  )}
-                
-          
-                <input type="file" onChange={handleFileChange} style={{width:'100%', minHeight: "250px", minWidth: "300px", opacity:'0'}}/>
-          
-                </Box>
-
-                <FormControl variant="standard" fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id="size-label">Size</InputLabel>
-                    <Select
-                        labelId="size-label"
-                        id="size"
-                        value={size}
-                        onChange={handleSizeChange}
-                        label="Size"
-                    >
-                        <MenuItem value="">
-                            <em>None</em>
-                        </MenuItem>
-                        <MenuItem value={3}>Small</MenuItem>
-                        <MenuItem value={2}>Medium</MenuItem>
-                        <MenuItem value={1}>Large</MenuItem>
-                    </Select>
-                </FormControl>
-
-                <FormControl variant="standard" fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id="position-label">Position</InputLabel>
-                    <Select
-                        labelId="position-label"
-                        id="position"
-                        value={position}
-                        onChange={handlePositionChange}
-                        label="Position"
-                    >
-                        <MenuItem value="">
-                            <em>None</em>
-                        </MenuItem>
-                        <MenuItem value={0}>Top Left</MenuItem>
-                        <MenuItem value={1}>Top Right</MenuItem>
-                        <MenuItem value={2}>Bottom Left</MenuItem>
-                        <MenuItem value={3}>Bottom Right</MenuItem>
-                    </Select>
-                </FormControl>
-
-                <Typography variant="h6" gutterBottom>
-                    Select Time Duration:
+        <div style={{ minHeight: '80vh' }}>
+            <Box sx={{ p: { xs: 1, sm: 2, md: 3, lg: 4 } }} alignItems={'center'}>
+                <Typography variant="h4" gutterBottom>
+                    Upload Your Advertisement for Streamer: {id}
                 </Typography>
-                <Slider
-                    aria-label="Time Duration"
-                    defaultValue={timeDuration}
-                    onChange={handleTimeDurationChange}
-                    valueLabelDisplay="auto"
-                    step={5}
-                    marks
-                    min={5}
-                    max={120}
-                    sx={{ mb: 2 }}
-                />
+                <FormControl variant="standard" fullWidth>
+                    <Box
+                        sx={{ my: { xs: 2, sm: 3, md: 4, lg: 5 },
+                            margin: "auto",
+                            textAlign: "center",
+                            width: "60%",
+                            border: "2px dashed #ccc",
+                            borderRadius: "20px",
+                            height: "250px",
+                            minWidth: "300px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            mb: 2,
+                            backgroundColor: isHovered ? "grey" : "#fff",
+                            color: isHovered ? "#fff" : "#000",
+                            transition: "background-color 0.3s ease",
+                        }}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                    >
+                        {file ? (
+                            <div style={{ marginTop: "10px", position: 'absolute', width: '50%', textAlign: 'center' }}>
+                                <p>{isHovered ? "Drop it like it's hot!" : `Uploaded file: ${file.name}`}</p>
+                                <h3>{isHovered ? "" : `Total duration: ${videoDuration ? `${Math.round(videoDuration)} seconds` : "Loading..."}`}</h3>
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                position: "absolute",
+                            }}>
+                                {isHovered ? null : <img src="/dropfile.png" alt="Drop file here" style={{ height: '150px', paddingTop: '15px' }} />}
+                                <p>{isHovered ? "Drop it like it's hot!" : "Drag and drop a file here or click to upload"}</p>
+                            </div>
+                        )}
+                        <input  type="file" accept="video/*"  onChange={handleFileChange} style={{ width: '100%', minHeight: "250px", minWidth: "300px", opacity: '0' }} />
+                    </Box>
 
-                <Button variant="contained" onClick={handleSubmit}>
-                    Submit
-                </Button>
-            </FormControl>
-        </Box>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        style={{ height: '60px', width: '50%', maxWidth: '250px', fontSize: '1.25rem', fontWeight: 'bold', margin: 'auto' }}
+                        disabled={!file}
+                    >
+                        Continue
+                    </Button>
+                </FormControl>
+            </Box>
         </div>
-        <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', minHeight:'100vh'}}>
+        
+        
+        <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', paddingBottom:'60px', minHeight:'80vh'}}>
             <h2 style={{textAlign:'center', padding:'5px'}}>Know More about streamer!!</h2>
             <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
                     <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>

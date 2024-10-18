@@ -15,7 +15,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route 
-          path="/player" 
+          path="/player/:id" 
           element={
             <Player 
               type="video" 
