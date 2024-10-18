@@ -269,33 +269,29 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
 //       res.status(500).json({ message: 'Failed to save hash' });
 //   }
 // });
-function generateCloudinarySignature(paramsToSign :any) {
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-  if (!apiSecret) {
-    throw new Error('Cloudinary API Secret is required');
-  }
-
+const generateCloudinarySignature = (paramsToSign: string): string => {
   return crypto
-    .createHmac('sha256', apiSecret)
-    .update(paramsToSign)
+    .createHash('sha256')
+    .update(paramsToSign + process.env.CLOUDINARY_API_SECRET)
     .digest('hex');
-}
+};
 
 // Generate signature for Cloudinary upload
 app.get('/get-signature', (req, res) => {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);
-    const folder = 'uploads'; // Specify your Cloudinary folder
+    const folder = 'uploads';
+    const uploadPreset = 'ml_default'; // Include the upload preset
     
     // Include all parameters that need to be signed
-    const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}&upload_preset=${uploadPreset}`;
     const signature = generateCloudinarySignature(paramsToSign);
     
     res.json({
       signature,
       timestamp,
       folder,
+      uploadPreset,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
       apiKey: process.env.CLOUDINARY_API_KEY
     });

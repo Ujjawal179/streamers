@@ -10,8 +10,8 @@ interface SignatureResponse {
   folder: string;
   cloudName: string;
   apiKey: string;
+  uploadPreset: string;
 }
-
 interface CloudinaryResponse {
   secure_url: string;
   public_id: string;
@@ -53,7 +53,7 @@ export const uploadMedia = async (
     const { data: signatureData } = await axios.get<SignatureResponse>(
       `${BACKEND_API_URL}/get-signature`
     );
-    console.log("first")
+
     // Step 2: Prepare form data for Cloudinary
     const formData = new FormData();
     formData.append('file', file);
@@ -61,9 +61,10 @@ export const uploadMedia = async (
     formData.append('timestamp', signatureData.timestamp.toString());
     formData.append('signature', signatureData.signature);
     formData.append('folder', signatureData.folder);
+    formData.append('upload_preset', signatureData.uploadPreset);
 
     // Step 3: Upload to Cloudinary
-    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/auto/upload`;
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/video/upload`;
     const { data: cloudinaryData } = await axios.post<CloudinaryResponse>(
       cloudinaryUrl,
       formData,
@@ -79,6 +80,7 @@ export const uploadMedia = async (
         }
       }
     );
+    console.log(cloudinaryData);
 
     // Step 4: Save upload details in backend
     const { data: backendData } = await axios.post<BackendResponse>(
@@ -95,10 +97,7 @@ export const uploadMedia = async (
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
-      throw new UploadError(
-        `Upload failed: ${axiosError.response?.data || axiosError.message}`,
-        error
-      );
+      console.log(error);
     }
     throw new UploadError(
       'An unexpected error occurred during upload',
