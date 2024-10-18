@@ -21,22 +21,7 @@ const redisClient = createClient({
 
 // Connect to Redis
 redisClient.connect().catch(console.error);
-function generateCloudinarySignature(timestamp:any) {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary configuration is incomplete. Please check your environment variables.');
-  }
-
-  const stringToSign = `timestamp=${timestamp}`;
-  
-  return crypto
-    .createHmac('sha256', apiSecret)
-    .update(stringToSign)
-    .digest('hex');
-}
 
 // Create a new express application
 const app = express();
@@ -284,16 +269,52 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
 //       res.status(500).json({ message: 'Failed to save hash' });
 //   }
 // });
-app.post('/upload/:userId', async (req, res) => {
-  const { url, public_id, resource_type } = req.body;
-  const user_id = req.params.userId;
+function generateCloudinarySignature(paramsToSign :any) {
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  if (!user_id) {
-    return res.status(400).json({ message: 'No user_id provided' });
+  if (!apiSecret) {
+    throw new Error('Cloudinary API Secret is required');
   }
 
-  if (!url) {
-    return res.status(400).json({ message: 'No URL provided' });
+  return crypto
+    .createHmac('sha256', apiSecret)
+    .update(paramsToSign)
+    .digest('hex');
+}
+
+// Generate signature for Cloudinary upload
+app.get('/get-signature', (req, res) => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = 'uploads'; // Specify your Cloudinary folder
+    
+    // Include all parameters that need to be signed
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
+    const signature = generateCloudinarySignature(paramsToSign);
+    
+    res.json({
+      signature,
+      timestamp,
+      folder,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    });
+  } catch (error) {
+    console.error('Error generating signature:', error);
+    res.status(500).json({ error: 'Failed to generate signature' });
+  }
+});
+
+// Save upload details
+app.post('/upload/:userId', async (req, res) => {
+  const { url, public_id, resource_type } = req.body;
+  const userId = req.params.userId;
+
+  if (!userId || !url) {
+    return res.status(400).json({ 
+      error: 'Missing required parameters',
+      details: !userId ? 'userId is required' : 'url is required'
+    });
   }
 
   try {
@@ -304,44 +325,50 @@ app.post('/upload/:userId', async (req, res) => {
       uploaded_at: new Date().toISOString(),
     };
 
-    // Save the Cloudinary data in Redis
-    await redisClient.rPush(`user:${user_id}:videos`, JSON.stringify(videoData));
+    // Save to Redis with expiration (e.g., 24 hours)
+    const key = `user:${userId}:videos`;
+    await redisClient.rPush(key, JSON.stringify(videoData));
+    await redisClient.expire(key, 24 * 60 * 60); // 24 hours TTL
 
-    res.json({ message: 'URL received and saved successfully', data: videoData });
+    res.json({ 
+      message: 'Upload details saved successfully', 
+      data: videoData 
+    });
   } catch (error) {
-    console.error('Error saving Cloudinary data:', error);
-    res.status(500).json({ message: 'Failed to save Cloudinary data' });
+    console.error('Error saving upload details:', error);
+    res.status(500).json({ 
+      error: 'Failed to save upload details',
+      details: error
+    });
   }
 });
 
-// Route for retrieving the latest video
+// Get user's videos
 app.get('/user/:userId/videos', async (req, res) => {
-  const user_id = req.params.userId;
+  const userId = req.params.userId;
 
-  if (!user_id) {
-    return res.status(400).json({ message: 'No user_id provided' });
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
   }
 
   try {
-    const videoData = await redisClient.lPop(`user:${user_id}:videos`);
+    // Get all videos instead of just popping one
+    const key = `user:${userId}:videos`;
+    const videos = await redisClient.lRange(key, 0, -1);
 
-    if (!videoData) {
-      return res.status(404).json({ message: 'No videos available' });
+    if (!videos || videos.length === 0) {
+      return res.status(404).json({ message: 'No videos found' });
     }
 
-    const parsedVideoData = JSON.parse(videoData);
-    res.json({ video: parsedVideoData });
+    const parsedVideos = videos.map(video => JSON.parse(video));
+    res.json({ videos: parsedVideos });
   } catch (error) {
-    console.error('Error retrieving video data:', error);
-    res.status(500).json({ message: 'Failed to retrieve video data' });
+    console.error('Error retrieving videos:', error);
+    res.status(500).json({ 
+      error: 'Failed to retrieve videos',
+      details: error
+    });
   }
-});
-
-// New route for generating Cloudinary signature
-app.get('/get-signature', (req, res) => {
-  const timestamp = Math.round(new Date().getTime() / 1000);
-  const signature = generateCloudinarySignature(timestamp);
-  res.json({ signature, timestamp });
 });
 
 // app.get('/user/1/videos', async (req, res) => {
