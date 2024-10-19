@@ -1,6 +1,8 @@
 import axios from 'axios';
-
-const BASE_URL: string = "http://localhost:3001" ; // Replace with your actual backend URL
+import { 
+  BACKEND_API_URL, 
+} from '../config/env';
+const BASE_URL: string = BACKEND_API_URL ; // Replace with your actual backend URL
 
 // Type definitions (adjust these based on your actual API response and request types)
 interface UserData {

@@ -6,11 +6,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
-// import multer from 'multer';
-// import PinataClient  from '@pinata/sdk';
-// import fs from 'fs';
-// import path from 'path';
-// import { fileURLToPath } from 'url';
+
 import {config} from 'dotenv';
 import UserRouter from "./router/userRouter";
 config();
@@ -245,30 +241,6 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
 
 
 
-// app.post('/upload/:userId', async (req, res) => {
-//   const { hash } = req.body;
-//   const user_id  = req.params.userId;
-//   if (!user_id) {
-//       return res.status(400).json({ message: 'No user_id provided' });
-//   }
-  
-//   if (!hash) {
-//       return res.status(400).json({ message: 'No hash provided' });
-//   }
-
-//   try {
-//       // Here you would typically save the hash to your database
-//       // For example:
-//       // await saveHashToDatabase(hash);
-    
-//       // console.log("Received hash:", hash);
-//       redisClient.rPush(`user:${user_id}:video`, hash)
-//       res.json({ message: 'Hash received and saved successfully' });
-//   } catch (error) {
-//       console.error('Error saving hash:', error);
-//       res.status(500).json({ message: 'Failed to save hash' });
-//   }
-// });
 const generateCloudinarySignature = (paramsToSign: string): string => {
   return crypto
     .createHash('sha256')
@@ -305,7 +277,7 @@ app.get('/get-signature', (req, res) => {
 app.post('/upload/:userId', async (req, res) => {
   const { url, public_id, resource_type } = req.body;
   const userId = req.params.userId;
-
+  console.log(userId)
   if (!userId || !url) {
     return res.status(400).json({ 
       error: 'Missing required parameters',
@@ -320,9 +292,10 @@ app.post('/upload/:userId', async (req, res) => {
       resource_type: resource_type || 'video',
       uploaded_at: new Date().toISOString(),
     };
-
+    console.log(videoData)
     // Save to Redis with expiration (e.g., 24 hours)
     const key = `user:${userId}:videos`;
+    console.log(key)
     await redisClient.rPush(key, JSON.stringify(videoData));
     await redisClient.expire(key, 24 * 60 * 60); // 24 hours TTL
 
@@ -342,7 +315,7 @@ app.post('/upload/:userId', async (req, res) => {
 // Get user's videos
 app.get('/user/:userId/videos', async (req, res) => {
   const userId = req.params.userId;
-
+  console.log("working...")
   if (!userId) {
     return res.status(400).json({ error: 'userId is required' });
   }
@@ -350,13 +323,16 @@ app.get('/user/:userId/videos', async (req, res) => {
   try {
     // Get all videos instead of just popping one
     const key = `user:${userId}:videos`;
+    console.log(key)
     const videos = await redisClient.lRange(key, 0, -1);
-
+    console.log(videos)
     if (!videos || videos.length === 0) {
+      console.log("no videos found")
       return res.status(404).json({ message: 'No videos found' });
     }
 
     const parsedVideos = videos.map(video => JSON.parse(video));
+    console.log(parsedVideos)
     res.json({ videos: parsedVideos });
   } catch (error) {
     console.error('Error retrieving videos:', error);
@@ -367,27 +343,7 @@ app.get('/user/:userId/videos', async (req, res) => {
   }
 });
 
-// app.get('/user/1/videos', async (req, res) => {
-//   const user_id  = 1;
-//   if (!user_id) {
-//       return res.status(400).json({ message: 'No user_id provided' });
-//   }
 
-//   try {
-//     const hash= await redisClient.lIndex(`user:${user_id}:video`,0);
-//     console.log("success",hash)
-//     if (!hash) {
-//       return res.status(404).json({ message: 'No hashes available' });
-//     }
-//     res.json({ video:`https://gateway.pinata.cloud/ipfs/${hash}` });
-     
-
-//   } catch (error) {
-//       console.error('Error retrieving hashes:', error);
-//       res.status(500).json({ message: 'Failed to retrieve hashes' });
-//   }
-// });
-// Define a route to handle POST requests at the "/api/echo" path
 app.listen(port, () =>{
     console.log(`Server is running at http://localhost:${port}`);
   });

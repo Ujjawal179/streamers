@@ -1,216 +1,141 @@
-import React, { useEffect, useState, useRef } from 'react';
-import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
+
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 
-interface PlayerProps {
-    type: 'image' | 'video';
-    size: number;
-    position: number;
-    media: string;
-    time: number;
+interface Video {
+  url: string;
+  public_id: string;
+  resource_type: string;
+  uploaded_at: string;
 }
 
-interface PlayerData {
-    video: string;
+interface PlayerProps {
+  type: 'image' | 'video';
+  size: number;
+  position: number;
+  media: string;
+  time: number;
 }
 
 const Player = ({ type, size, position, media, time }: PlayerProps) => {
-    const { id } = useParams<{ id: string }>();
-    const [playerData, setPlayerData] = useState<PlayerData>({ video: '' });
-    const [isVideoEnded, setIsVideoEnded] = useState(false);
-    const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null); // Reference to the video element
+  const { id } = useParams<{ id: string }>();
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [queueCompleted, setQueueCompleted] = useState(false);
 
-    // Fetch player data (video)
-    const fetchData = async () => {
-        try {
-            const response = await axios.get(`http://localhost:3001/user/${id}/videos`);
-            setPlayerData(response.data);
-            setIsVideoEnded(false); // Reset when a new video is fetched
-        } catch (error) {
-            console.error('Error fetching player data:', error);
-        }
-    };
+  const fetchVideos = async () => {
+    try {
+      setIsLoading(true);
+      setQueueCompleted(false);
+      const response = await axios.get<{ videos: Video[] }>(`http://localhost:3001/user/${id}/videos`);
+      const fetchedVideos = response.data.videos;
+      
+      if (fetchedVideos.length > 0) {
+        setVideos(fetchedVideos.slice(1)); // Store remaining videos
+        setCurrentVideo(fetchedVideos[0]); // Set first video as current
+      } else {
+        setQueueCompleted(true);
+      }
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      setIsLoading(false);
+      setQueueCompleted(true);
+    }
+  };
 
-    useEffect(() => {
-        // Fetch data when the component mounts
-        fetchData();
+  useEffect(() => {
+    fetchVideos();
+  }, [id]);
 
-        return () => {
-            // Clear any running intervals if the component unmounts
-            if (intervalIdRef.current) {
-                clearInterval(intervalIdRef.current);
-            }
-        };
-    }, []);
+  const handleVideoEnded = () => {
+    if (videos.length > 0) {
+      setCurrentVideo(videos[0]); // Get the next video
+      setVideos(videos.slice(1)); // Remove the used video from the queue
+    } else {
+      setCurrentVideo(null);
+      setQueueCompleted(true);
+    }
+  };
 
-    // Poll for a new video every 5 seconds when the video has ended
-    useEffect(() => {
-        if (isVideoEnded) {
-            intervalIdRef.current = setInterval(() => {
-                setPlayerData({ video: '' }); // Clear the video source
-                console.log('Checking for new video...');
-                fetchData();
-            }, 5000); // Check every 5 seconds
-        } else if (intervalIdRef.current) {
-            clearInterval(intervalIdRef.current); // Clear polling if video hasn't ended
-        }
+  const containerStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100vh',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  };
 
-        return () => {
-            // Cleanup interval on component unmount
-            if (intervalIdRef.current) {
-                clearInterval(intervalIdRef.current);
-            }
-        };
-    }, [isVideoEnded]);
+  const videoContainerStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  };
 
-    // Handle video end
-    const handleVideoEnded = () => {
-        setIsVideoEnded(true);
+  const messageStyle: React.CSSProperties = {
+    color: '#fff',
+    fontSize: '1.5rem',
+    textAlign: 'center',
+    padding: '20px',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: '8px',
+    maxWidth: '80%',
+  };
 
-        setPlayerData({ video: '' }); // Clear the video source
-        // Fetch new video after the current one ends
-        fetchData();
-    };
-
-    // Play video automatically when the video source is updated
-    useEffect(() => {
-        if (videoRef.current && playerData.video) {
-            videoRef.current.load(); // Reload the video with the new source
-            videoRef.current.play(); // Automatically play the new video
-        }
-    }, [playerData.video]);
-
-    const style: React.CSSProperties = {
-        width: '100%',
-        height: '100%',
-        display:'flex',
-        justifyContent:'center',
-    };
-
+  if (isLoading) {
     return (
-        <>
-            {playerData.video && (
-                <div className={`${type}-player`} style={style}>
-                    <video ref={videoRef} height="100%" muted autoPlay onEnded={handleVideoEnded}>
-                        <source src={playerData.video} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            )}
-        </>
+      <div style={containerStyle}>
+        <div style={messageStyle}>Loading...</div>
+      </div>
     );
+  }
+
+  if (queueCompleted) {
+    return (
+      <div style={containerStyle}>
+        <div style={messageStyle}>No more videos</div>
+      </div>
+    );
+  }
+
+  if (!currentVideo) {
+    return (
+      <div style={containerStyle}>
+        <div style={messageStyle}>No videos available</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle}>
+      <div style={videoContainerStyle}>
+        <video
+          key={currentVideo.url}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            width: 'auto',
+            height: 'auto',
+          }}
+          autoPlay
+          controls
+          onEnded={handleVideoEnded}
+        >
+          <source src={currentVideo.url} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
+  );
 };
 
 export default Player;
-
-
-
-// import React, { useEffect, useState } from 'react';
-// import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
-// // import ImagePlayer from '../../components/ImagePlayer/ImagePlayer';
-// import axios from 'axios';
-
-// interface PlayerProps {
-//     type: 'image' | 'video';
-//     size: number;
-//     position: number;
-//     media: string;
-//     time: number;
-// }
-
-// interface PlayerData {
-//     media: string;
-// }
-
-// const Player = ({ type, size, position, media, time }: PlayerProps) => {
-//     const [playerData, setPlayerData] = useState<PlayerData>({  media });
-
-//     useEffect(() => {
-//         const fetchData = async () => {
-//             try {
-//                 const response = await axios.get('http://localhost:3001/user/1/videos');
-//                 // console.log(response.data)
-//                 setPlayerData(response.data.video);
-//             } catch (error) {
-//                 console.error('Error fetching player data:', error);
-//             }
-//         };
-
-//         fetchData();
-//     }, []);
-
-//     const style: React.CSSProperties = {
-//         width: '100%',
-//         height: '100%',
-//     };
-
-//     return (
-//         <>
-//         <div className={`${type}-player`} style={style}>
-//                 <VideoPlayer video={playerData.media} />
-//         </div>
-//         </>
-//     );
-// };
-
-// export default Player;
-
-
-// import React, { useEffect, useState } from 'react';
-// import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
-// import ImagePlayer from '../../components/ImagePlayer/ImagePlayer';
-// import axios from 'axios';
-
-// interface PlayerProps {
-//     type: 'image' | 'video';
-//     size: number;
-//     position: number;
-//     media: string;
-//     time: number;
-// }
-
-// interface PlayerData {
-//     type: 'image' | 'video';
-//     size: number;
-//     position: number;
-//     media: string;
-//     time: number;
-// }
-
-// const Player = ({ type, size, position, media, time }: PlayerProps) => {
-//     const [playerData, setPlayerData] = useState<PlayerData>({ type, size, position, media, time });
-
-//     useEffect(() => {
-//         const fetchData = async () => {
-//             try {
-//                 const response = await axios.get('http://localhost:3001/user/1/videos');
-//                 setPlayerData(response.data);
-//             } catch (error) {
-//                 console.error('Error fetching player data:', error);
-//             }
-//         };
-
-//         fetchData();
-//     }, []);
-
-//     const style: React.CSSProperties = {
-//         width: '100%',
-//         height: '100%',
-//     };
-
-//     return (
-//         <>
-//         <div className={`${type}-player`} style={style}>
-//             {type === 'image' ? (
-//                 <ImagePlayer size={size} position={position} image={media} time={time} />
-//             ) : (
-//                 <VideoPlayer size={size} position={position} video={media} time={time} />
-//             )}
-//         </div>
-//         </>
-//     );
-// };
-
-// export default Player;
