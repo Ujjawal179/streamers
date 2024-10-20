@@ -4,12 +4,12 @@ import { loginUser } from '../../api/userService';
 
 function Login() {
     
-    const [mail, setMail] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setMail(e.target.value);
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(e.target.value);
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,7 +19,7 @@ function Login() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
     
-        const result = await loginUser({ mail, password });
+        const result = await loginUser({ email, password });
     
         if (result.success) {
           // Redirect to another page, like the dashboard
@@ -43,12 +43,12 @@ function Login() {
                         <h1 className='heading'>Welcome Back!!</h1>
                         <span>If you don't have an account, <a href="/signup" style={{textDecoration:"none"}}>Sign Up</a>, else Log In to continue!</span>
                         <TextField
-                            id="mail"
-                            label="Mail"
+                            id="email"
+                            label="Email"
                             type="mail"
                             variant="standard"
-                            value={mail}
-                            onChange={handleMailChange}
+                            value={email}
+                            onChange={handleEmailChange}
                             style={{ margin: '10px' }}
                             fullWidth
                         />

@@ -13,7 +13,7 @@ interface UserData {
 }
 
 interface LoginData {
-  mail: string; // Updated to use phone number
+  email: string; // Updated to use phone number
   password: string;
 }
 
@@ -57,6 +57,7 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
 // Login a user
 export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
   try {
+    
     const response = await axios.post<ApiResponse>(`${BASE_URL}/login`, loginData);
 
     const { token } = response.data as { token: string };
