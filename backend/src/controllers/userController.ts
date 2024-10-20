@@ -11,11 +11,13 @@ const registerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
+  userType: z.enum(['company', 'youtuber']),
 });
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
+  userType: z.enum(['company', 'youtuber']),
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -35,9 +37,36 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
     return res.status(400).json({ errors });
   }
 
-  const { name, email, password } = parseResult.data;
+  const { name, email, password,userType } = parseResult.data;
 
   try {
+
+    if(userType === 'company'){
+      // Check if the user already exists
+      const existingUser = await prisma.company.findUnique({
+        where: {
+          email,
+        },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create a new user
+      const newUser = await prisma.company.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+        },
+      });
+
+      return res.status(201).json({ message: 'User registration successful', user: newUser, userType:"company" });
+    }
 
     // Check if the user already exists
     const existingUser = await prisma.youtuber.findUnique({
@@ -62,7 +91,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
       },
     });
 
-    return res.status(201).json({ message: 'User registration successful', user: newUser });
+    return res.status(201).json({ message: 'User registration successful', user: newUser ,userType:'youtuber'});
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
@@ -81,9 +110,27 @@ export const login=async (req: Request, res: Response): Promise<Response> => {
     return res.status(400).json({ errors });
   }
 
-  const { email, password } = parseResult.data;
+  const { email, password,userType } = parseResult.data;
 
   try {
+    if(userType === 'company'){
+      // Check if user exists
+      const user = await prisma.company.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      // Compare passwords
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      return res.status(200).json({ message: 'Login successful', user: user,userType:'company'});
+    }
     // Check if user exists
     const user = await prisma.youtuber.findUnique({
       where: { email },
@@ -99,10 +146,9 @@ export const login=async (req: Request, res: Response): Promise<Response> => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+   
 
-    return res.status(200).json({ message: 'Login successful', token });
+    return res.status(200).json({ message: 'Login successful', user: user,userType:'youtuber' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
