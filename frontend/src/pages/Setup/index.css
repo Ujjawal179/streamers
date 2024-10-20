@@ -1,0 +1,28 @@
+.container {
+    min-height: 90vh;
+    padding: 1vw;
+}
+
+igc-switch {
+    margin: 0.5rem;
+}
+
+igc-button {
+    margin: 1rem 0.5rem 0 0;
+}
+
+form {
+    width: 100%;
+    max-width: 800px;
+    margin: auto;
+}
+
+.links{
+    display: flex;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.links div{
+    margin: 0.5rem;
+}

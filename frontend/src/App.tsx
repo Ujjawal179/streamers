@@ -9,6 +9,8 @@ import SignUp from './pages/SignUp/SignUp';
 import Footer from './components/Footer/Footer';
 import React from 'react';
 import Navbar from './components/Navbar/Navbar';
+import DashBoard from './pages/DashBoard/DashBoard';
+import Setup from './pages/Setup/Setup';
 
 const App: React.FC = () => {
   return (
@@ -34,9 +36,11 @@ const App: React.FC = () => {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/upload/:id" element={<UploadAd />} />
-                <Route path="/setup" element={<SetupAd />} />
+                {/* <Route path="/setup" element={<SetupAd />} /> */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/dashboard" element={<DashBoard/>} />
                 <Route path="/signup" element={<SignUp />} />
+                <Route path="/setup" element={<Setup />} />
                 <Route path="*" element={<h1>404 Not Found</h1>} />
               </Routes>
               <Footer />

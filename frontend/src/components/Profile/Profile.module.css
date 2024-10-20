@@ -1,0 +1,57 @@
+
+.profile{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    margin-top: 50px;
+}
+
+.profilepic{
+    width: 80vw;
+    max-width: 400px;
+
+}
+
+
+
+.profileDetails{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 10vw;
+}
+
+.name, .email, .phoneNumber{
+    width: 100%;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.gender{
+    width: 100px;
+}
+
+.height{
+    max-width: 150px;
+    width: 50%;
+}
+.weight{
+    max-width: 150px;
+    width: 50%;
+}
+
+
+@media screen and (max-width: 900px) {
+
+    .profileDetails {
+        padding-left: 0;
+        padding-top: 1rem;
+    }
+    .height{
+        width: 45%;
+    }
+    .weight{
+        width: 45%;
+    }
+} 
