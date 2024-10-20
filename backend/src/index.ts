@@ -258,7 +258,6 @@ app.get('/get-signature', (req, res) => {
     // Include all parameters that need to be signed
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}&upload_preset=${uploadPreset}`;
     const signature = generateCloudinarySignature(paramsToSign);
-    
     res.json({
       signature,
       timestamp,
