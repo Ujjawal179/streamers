@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
