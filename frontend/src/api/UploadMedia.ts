@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { 
-  BACKEND_API_URL, MODERATION_API_URL
+  BACKEND_API_URL
 } from '../config/env';
 
 // Types
@@ -56,21 +56,21 @@ export const uploadMedia = async (
     const moderationFormData = new FormData();
     moderationFormData.append('file', file);
     
-    const { data: moderationData } = await axios.post<ModerationResponse>(
-      MODERATION_API_URL,
-      moderationFormData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        // Add timeout for large files
-        timeout: 300000, // 5 minutes
-        // Allow credentials if needed
-        withCredentials: true
-      }
-    );
-      console.log(moderationData)
-    if (moderationData.result === 'rejected') {
-      throw new UploadError(moderationData.message || 'Content moderation failed.');
-    }
+    // const { data: moderationData } = await axios.post<ModerationResponse>(
+      // MODERATION_API_URL,
+      // moderationFormData,
+    //   {
+    //     headers: { 'Content-Type': 'multipart/form-data' },
+    //     // Add timeout for large files
+    //     timeout: 300000, // 5 minutes
+    //     // Allow credentials if needed
+    //     withCredentials: true
+    //   }
+    // );
+      // console.log(moderationData)
+    // if (moderationData.result === 'rejected') {
+    //   throw new UploadError(moderationData.message || 'Content moderation failed.');
+    // }
     // Step 1: Get signature and upload parameters from backend
     const { data: signatureData } = await axios.get<SignatureResponse>(
       `${BACKEND_API_URL}/get-signature`

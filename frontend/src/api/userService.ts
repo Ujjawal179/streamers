@@ -95,7 +95,7 @@ export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
 // };
 
 export const logoutUser = () => {
-  localStorage.removeItem('authToken');
+  localStorage.removeItem('user');
   window.location.href = '/login'; // Redirect to login page after logout
 };
 

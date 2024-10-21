@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { TextField, InputLabel, FormControl, NativeSelect, Box, Button } from "@mui/material";
 import styles from "./Profile.module.css";
 
-const Profile: React.FC = () => {
+const BillingAdress: React.FC = () => {
   const [Name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<number | string>();
   const [about, setAbout] = useState< string>("");
@@ -49,4 +49,4 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+export default BillingAdress;

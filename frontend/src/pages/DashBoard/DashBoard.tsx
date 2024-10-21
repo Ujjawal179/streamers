@@ -2,6 +2,8 @@ import * as React from "react";
 import { Box, Tabs, Tab } from "@mui/material";
 import Profile from "../../components/Profile/Profile";
 import Payment from "../../components/Payment/Payment";
+import BillingAdress from "../../components/BillingAdress/BillingAdress";
+import Account from "../../components/Account/Account";
 
 interface CustomTabPanelProps {
     children?: React.ReactNode;
@@ -55,22 +57,22 @@ export default function DashBoard() {
                     aria-label="trainer admin tabs"
                 >
                     <Tab label="Profile" {...a11yProps(0)} />
-                    {/* <Tab label="Chat" {...a11yProps(1)} />
-                    <Tab label="Memberships" {...a11yProps(2)} /> */}
-                    <Tab label="Payments" {...a11yProps(1)} />
+                    <Tab label="Billing" {...a11yProps(1)} />
+                    <Tab label="Payments" {...a11yProps(2)} />
+                    <Tab label="Account" {...a11yProps(3)} />
                 </Tabs>
             </Box>
             <CustomTabPanel value={value} index={0} style={{ minHeight: "85vh" }}>
                 <Profile />
             </CustomTabPanel>
-            {/* <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
-                <Chat />
+            <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
+                <BillingAdress />
             </CustomTabPanel>
             <CustomTabPanel value={value} index={2} style={{ minHeight: "85vh" }}>
-                <Membership />
-            </CustomTabPanel> */}
-            <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
                 <Payment />
+            </CustomTabPanel>
+            <CustomTabPanel value={value} index={3} style={{ minHeight: "85vh" }}>
+                <Account />
             </CustomTabPanel>
         </Box>
     );
