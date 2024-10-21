@@ -1,5 +1,7 @@
-# cleanup_and_run.sh
+
 #!/bin/bash
+# source nsfw/bin/activate
+
 echo "Cleaning up old processes..."
 pkill -f gunicorn
 sleep 2

@@ -3,9 +3,3 @@ node_modules
 .env
 /dist
 # uploads
-ai-checker/nsfw
-ai-checker/nsfw_mobilenet2.224x224.h5
-ai-checker/__pycache__
-ai-checker/app/__init__.py
-ai-checker/app/uploads
-ai-checker/app/__pycache__

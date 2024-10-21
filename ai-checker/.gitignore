@@ -1,0 +1,5 @@
+nsfw
+__pycache__
+app/__init__.py
+app/uploads
+app/__pycache__
