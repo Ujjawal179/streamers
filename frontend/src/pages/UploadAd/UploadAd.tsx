@@ -5,6 +5,7 @@ import {
     Button,
     Box,
     Typography,
+    CircularProgress,
 } from "@mui/material";
 import { uploadMedia } from "../../api/UploadMedia";
 
@@ -12,14 +13,15 @@ const UploadAd: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [file, setFile] = useState<File | null>(null);
     const [isHovered, setIsHovered] = useState<boolean>(false);
-    const [videoDuration, setVideoDuration] = useState<number | null>(null); // State for video duration
+    const [videoDuration, setVideoDuration] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(false); // State to manage loading
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const droppedFile = e.dataTransfer.files[0];
         if (droppedFile) {
           setFile(droppedFile);
-          extractVideoDuration(droppedFile); // Extract duration when file is dropped
+          extractVideoDuration(droppedFile);
         }
         setIsHovered(false);
     };
@@ -32,11 +34,10 @@ const UploadAd: React.FC = () => {
         const uploadedFile = e.target.files?.[0];
         if (uploadedFile) {
           setFile(uploadedFile);
-          extractVideoDuration(uploadedFile); // Extract duration when file is uploaded
+          extractVideoDuration(uploadedFile);
         }
     };
 
-    // Function to extract video duration
     const extractVideoDuration = (file: File) => {
         const videoElement = document.createElement("video");
         videoElement.src = URL.createObjectURL(file);
@@ -48,11 +49,14 @@ const UploadAd: React.FC = () => {
 
     const handleSubmit = async () => {
         if (file) {
+            setIsLoading(true);  // Set loading to true when the process starts
             try {
                 await uploadMedia(file,`${id}`);
                 alert("Media uploaded successfully!");
             } catch (error) {
                 alert("Failed to upload media. Please try again.");
+            } finally {
+                setIsLoading(false);  // Set loading to false when the process finishes
             }
         } else {
             alert("Please select a media file to upload.");
@@ -122,9 +126,9 @@ const UploadAd: React.FC = () => {
                         variant="contained"
                         onClick={handleSubmit}
                         style={{ height: '60px', width: '50%', maxWidth: '250px', fontSize: '1.25rem', fontWeight: 'bold', margin: 'auto' }}
-                        disabled={!file}
+                        disabled={!file || isLoading} // Disable button if loading
                     >
-                        Continue
+                        {isLoading ? <CircularProgress size={24} /> : "Continue"}  {/* Show loading spinner when isLoading */}
                     </Button>
                 </FormControl>
             </Box>

@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { 
-  BACKEND_API_URL, 
+  BACKEND_API_URL, MODERATION_API_URL
 } from '../config/env';
 
 // Types
@@ -27,7 +27,10 @@ interface BackendResponse {
     uploaded_at: string;
   };
 }
-
+interface ModerationResponse {
+  result: 'approved' | 'rejected';
+  message: string;
+}
 export class UploadError extends Error {
   constructor(message: string, public readonly originalError?: Error) {
     super(message);
@@ -49,33 +52,39 @@ export const uploadMedia = async (
   }
 
   try {
-    console.log("first")
+        // Step 0: Content moderation check
+    const moderationFormData = new FormData();
+    moderationFormData.append('file', file);
+    
+    const { data: moderationData } = await axios.post<ModerationResponse>(
+      MODERATION_API_URL,
+      moderationFormData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        // Add timeout for large files
+        timeout: 300000, // 5 minutes
+        // Allow credentials if needed
+        withCredentials: true
+      }
+    );
+      console.log(moderationData)
+    if (moderationData.result === 'rejected') {
+      throw new UploadError(moderationData.message || 'Content moderation failed.');
+    }
     // Step 1: Get signature and upload parameters from backend
     const { data: signatureData } = await axios.get<SignatureResponse>(
       `${BACKEND_API_URL}/get-signature`
     );
-    console.log(signatureData)
+
     // Step 2: Prepare form data for Cloudinary
     const formData = new FormData();
     formData.append('file', file);
-    // const { data: moderationData } = await axios.post(
-    //   `${MODERATION_API_URL}`,
-    //   formData,
-    //   {
-    //     headers: { 'Content-Type': 'multipart/form-data' }
-    //   }
-    // );
-
-    // if (moderationData.result === 'rejected') {
-    //   throw new UploadError('This video contains inappropriate content and cannot be uploaded.');
-    // }
-    console.log("second")
     formData.append('api_key', signatureData.apiKey);
     formData.append('timestamp', signatureData.timestamp.toString());
     formData.append('signature', signatureData.signature);
     formData.append('folder', signatureData.folder);
     formData.append('upload_preset', signatureData.uploadPreset);
-      console.log("third")
+
     // Step 3: Upload to Cloudinary
     const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/video/upload`;
     const { data: cloudinaryData } = await axios.post<CloudinaryResponse>(
@@ -93,7 +102,6 @@ export const uploadMedia = async (
         }
       }
     );
-    console.log("forth")
     console.log(cloudinaryData);
 
     // Step 4: Save upload details in backend
@@ -119,7 +127,6 @@ export const uploadMedia = async (
     );
   }
 };
-
 // import axios, { AxiosError } from 'axios';
 // import { BACKEND_API_URL, MODERATION_API_URL } from '../config/env';
 
