@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Home from './pages/Home/Home';
 import Player from './pages/Player/Player';
 import SetupAd from './pages/SetupAd/SetupAd';
@@ -13,6 +13,7 @@ import DashBoard from './pages/DashBoard/DashBoard';
 import Setup from './pages/Setup/Setup';
 
 const App: React.FC = () => {
+  const isLoggedIn = !!localStorage.getItem('user');
   return (
     <Router>
       <Routes>
@@ -37,10 +38,30 @@ const App: React.FC = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/upload/:id" element={<UploadAd />} />
                 {/* <Route path="/setup" element={<SetupAd />} /> */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={<DashBoard/>} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/setup" element={<Setup />} />
+                <Route 
+                  path="/login" 
+                  element={
+                  isLoggedIn ? <Navigate to="/dashboard" /> : <Login />
+                  } 
+                />
+                <Route 
+                  path="/signup" 
+                  element={
+                  isLoggedIn ? <Navigate to="/dashboard" /> : <SignUp />
+                  } 
+                />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                  isLoggedIn ? <DashBoard /> : <Navigate to="/signup" />
+                  } 
+                />
+                <Route 
+                  path="/setup" 
+                  element={
+                  isLoggedIn ? <Setup /> : <Navigate to="/signup" />
+                  } 
+                />
                 <Route path="*" element={<h1>404 Not Found</h1>} />
               </Routes>
               <Footer />

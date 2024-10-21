@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { TextField, Button, Grid, ToggleButton, ToggleButtonGroup, Box } from '@mui/material';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import { registerUser, signupUser } from '../../api/userService';
+import { registerUser } from '../../api/userService';
+import userEvent from '@testing-library/user-event';
 
 const SignUp: React.FC = () => {
     const [name, setName] = useState('');
-    const [mail, setMail] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('Creator');
+    const [userType, setUserType] = useState('youtuber');
     const [error, setError] = useState<string | null>(null);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -16,7 +17,7 @@ const SignUp: React.FC = () => {
     };
 
     const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setMail(e.target.value);
+        setEmail(e.target.value);
     };
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,10 +26,12 @@ const SignUp: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        console.log("2de");
     
         try {
-          const result = await registerUser({role, name, mail, password});
+          const result = await registerUser({name, email, password, userType});
           setError(null);
+          window.location.href = '/setup';
         } catch (error: any) {
           setError(error.message);
         }
@@ -36,7 +39,7 @@ const SignUp: React.FC = () => {
 
     const handleRoleChange = (event: React.MouseEvent<HTMLElement>, newRole: string | null) => {
         if (newRole !== null) {
-            setRole(newRole);
+            setUserType(newRole);
         }
     };
 
@@ -45,7 +48,7 @@ const SignUp: React.FC = () => {
             <Grid container spacing={3} justifyContent="center" alignItems="center" >
                 {window.innerWidth > 600 && (
                     <Grid item xs={12} sm={6} md={4}>
-                        {role === 'Creator' ? (
+                        {userType === 'youtuber' ? (
                             <img src={'/creator.png'} alt="Creator" style={{ width: '100%', height: 'auto' , animation: 'fadeIn 1s'}} />
                         ) : (
                             <img src={'/advertiser.png'} alt="Advertiser" style={{ width: '100%', height: 'auto' , animation: 'fadeIn 1s'}} />
@@ -54,18 +57,18 @@ const SignUp: React.FC = () => {
                 )}
                 <Grid item xs={12} sm={6} md={4}>
                     <Box display="flex" flexDirection="column" >
-                        <h1 className='heading'>Hello {role}!!</h1>
+                        <h1>Hello {userType === 'youtuber' ? 'Creator' : 'Advertiser'}!!</h1>
                         <span>Welcome to our platform, please sign up to continue!</span>
                         <ToggleButtonGroup
                             color="primary"
-                            value={role}
+                            value={userType}
                             exclusive
                             onChange={handleRoleChange}
                             aria-label="Role"
                             style={{ margin: '20px' }}
                         >
-                            <ToggleButton value="Creator">Creator</ToggleButton>
-                            <ToggleButton value="Advertiser">Advertiser</ToggleButton>
+                            <ToggleButton value="youtuber">Creator</ToggleButton>
+                            <ToggleButton value="company">Advertiser</ToggleButton>
                         </ToggleButtonGroup>
                         <TextField
                             id="name"
@@ -77,11 +80,11 @@ const SignUp: React.FC = () => {
                             fullWidth
                         />
                         <TextField
-                            id="mail"
+                            id="email"
                             label="Mail"
                             type="mail"
                             variant="standard"
-                            value={mail}
+                            value={email}
                             onChange={handleMailChange}
                             style={{ margin: '10px' }}
                             fullWidth

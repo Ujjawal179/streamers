@@ -6,25 +6,24 @@ const BASE_URL: string = BACKEND_API_URL ; // Replace with your actual backend U
 
 // Type definitions (adjust these based on your actual API response and request types)
 interface UserData {
-  role: string;
   name: string;
-  mail: string; // Updated to use phone number
+  email: string; // Updated to use phone number
   password: string;
+  userType: string;
 }
 
 interface LoginData {
   email: string; // Updated to use phone number
   password: string;
+  userType: string;
 }
-
 interface ApiResponse {
-  success: boolean;
-  message: string;
-  token?: string; // Add the token property as optional
-  // Define the structure of the API response
+  success?: boolean;
+  message?: string;
+  errors?: { path: string; message: string }[];
+  token?: string; // Add token property
 }
 
-// Register a new user
 export const registerUser = async (userData: UserData): Promise<ApiResponse> => {
   try {
     const response = await fetch(`${BASE_URL}/register`, {
@@ -34,8 +33,7 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
       },
       body: JSON.stringify(userData),
     });
-    console.log(response);
-    // Check if the response is JSON
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Response is not JSON');
@@ -44,7 +42,8 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
     const data: ApiResponse = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Registration failed');
+      const errorMessage = data.message || data.errors?.[0].message || 'Registration failed';
+      throw new Error(errorMessage);
     }
 
     return data;
@@ -72,9 +71,10 @@ export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
   } catch (error) {
     console.error('Login error:', error);
     if (axios.isAxiosError(error) && error.response) {
-      return { success: false, message: error.response.data.message || 'Server error' };
+      return { success: false, message: error.response.data.message || 'Login failed' };
     }
-    return { success: false, message: 'Server error' };
+    const errorMessage = (error as any).message || (error as any).errors?.[0].message || 'Registration failed';
+    throw new Error(errorMessage);
   }
 };
 

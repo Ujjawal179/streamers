@@ -50,7 +50,6 @@ export default class Setup extends React.Component<any, any> {
                     <IgrStep key="info-step" >
                         <span key="info-title" slot="title">Personal Info</span>
                         <form ref={this.InfoForm}>
-                            <IgrInput required label="Full name" type="text" name="fullName" value={this.state.formData.fullName || ''} onInput={this.handleInputChange}></IgrInput>
                             <IgrInput label="Phone Number (with country code)" type="text" name="phoneNum" value={this.state.formData.phoneNum || ''} onInput={this.handleInputChange}></IgrInput>
                             <IgrTextarea required label="About" type="textarea" name="about" value={this.state.formData.about || ''} onInput={this.handleInputChange}></IgrTextarea>
                             <IgrInput required label="Channel Link 1" type="text" name="mandatoryChannelLink" value={this.state.formData.mandatoryChannelLink || ''} onInput={this.handleInputChange} />
