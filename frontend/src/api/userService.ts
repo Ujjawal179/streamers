@@ -45,6 +45,8 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
       const errorMessage = data.message || data.errors?.[0].message || 'Registration failed';
       throw new Error(errorMessage);
     }
+    console.log(JSON.stringify(data));
+    localStorage.setItem('user', JSON.stringify(data));
 
     return data;
   } catch (error) {
@@ -63,6 +65,7 @@ export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
 
     // If login is successful, store the token in localStorage
     if (token) {
+      console.log(JSON.stringify(token));
       localStorage.setItem('user', JSON.stringify(token));
       return { success: true, message: 'Login successful', token };
     } else {
@@ -133,16 +136,16 @@ export const getUserById = async (userId: string): Promise<ApiResponse> => {
 };
 
 
-// Signup a new user
-export const signupUser = async (userData: UserData): Promise<ApiResponse> => {
-  try {
-    const response = await axios.post<ApiResponse>(`${BASE_URL}/signup`, userData);
-    return response.data;
-  } catch (error) {
-    console.error('Error signing up user:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      throw error.response.data;
-    }
-    throw new Error('Server error');
-  }
-};
+// // Signup a new user
+// export const signupUser = async (userData: UserData): Promise<ApiResponse> => {
+//   try {
+//     const response = await axios.post<ApiResponse>(`${BASE_URL}/signup`, userData);
+//     return response.data;
+//   } catch (error) {
+//     console.error('Error signing up user:', error);
+//     if (axios.isAxiosError(error) && error.response) {
+//       throw error.response.data;
+//     }
+//     throw new Error('Server error');
+//   }
+// };
