@@ -8,6 +8,7 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { uploadMedia } from "../../api/UploadMedia";
+import {useRazorpay} from 'react-razorpay';
 
 const UploadAd: React.FC = () => {
     const { userId } = useParams<{ userId: string }>(); // Extract userId from URL
@@ -19,6 +20,7 @@ const UploadAd: React.FC = () => {
     const [isHovered, setIsHovered] = useState<boolean>(false);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false); // State to manage loading
+    const {Razorpay}= useRazorpay();
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -59,7 +61,7 @@ const UploadAd: React.FC = () => {
                     return alert("Please provide a valid userId");
                 }
                 if (videoDuration !== null) {
-                    await uploadMedia(file, userId, companyId, videoDuration); // Pass userId and companyId
+                    await uploadMedia(file, userId, companyId, videoDuration,Razorpay); // Pass userId and companyId
                     alert("Media uploaded successfully!");
                 } else {
                     alert("Failed to get video duration. Please try again.");

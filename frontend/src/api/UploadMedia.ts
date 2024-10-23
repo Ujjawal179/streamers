@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { BACKEND_API_URL, RAZORPAY_KEY_ID } from '../config/env';
 import { useRazorpay, RazorpayOrderOptions } from 'react-razorpay';
 
@@ -27,12 +27,6 @@ interface BackendResponse {
   };
 }
 
-interface PaymentResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-}
-
 export class UploadError extends Error {
   constructor(message: string, public readonly originalError?: Error) {
     super(message);
@@ -40,64 +34,15 @@ export class UploadError extends Error {
   }
 }
 
-// Custom hook to handle Razorpay payments
-export const usePaymentHandler = () => {
-  const [Razorpay]:any = useRazorpay(); // Correctly destructure the Razorpay constructor
-
-  const handlePayment = async (userId: string, companyId: string, amount: number = 1000): Promise<void> => {
-    try {
-      const { data: paymentData } = await axios.post(`${BACKEND_API_URL}/create-payment`, {
-        youtuberId: userId,
-        companyId,
-        amount,
-        currency: 'INR'
-      });
-
-      return new Promise((resolve, reject) => {
-        const options = {
-          key: RAZORPAY_KEY_ID,
-          name: "Streamers.com",
-          amount: paymentData.amount,
-          currency: 'INR' as RazorpayOrderOptions['currency'],
-          order_id: paymentData.id,
-          handler: async function (response: PaymentResponse) {
-            try {
-              await axios.post(`${BACKEND_API_URL}/verify-payment`, {
-                orderId: paymentData.id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature
-              });
-              resolve();
-            } catch (error) {
-              reject(new Error('Payment verification failed'));
-            }
-          },
-          modal: {
-            ondismiss: function() {
-              reject(new Error('Payment cancelled'));
-            }
-          }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-      });
-    } catch (error) {
-      throw new Error('Failed to initialize payment');
-    }
-  };
-
-  return { handlePayment };
-};
-
-// Main upload function
 export const uploadMedia = async (
   file: File, 
   userId: string,
   companyId: string,
-  videoDuration: number,
+  videoDuration:number,
+  Razorpay:any,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
+
   if (!file) {
     throw new UploadError('Please select a file to upload.');
   }
@@ -107,6 +52,42 @@ export const uploadMedia = async (
   }
 
   try {
+    // Step 1: Create Payment
+    const { data: paymentData } = await axios.post(`${BACKEND_API_URL}/create-payment`, {
+      youtuberId: userId, // Changed from userId to youtuberId
+      companyId,
+      amount: 1000, // Specify the payment amount
+      currency: 'INR' // Specify the currency
+    });
+    console.log(paymentData);
+
+
+    // Step 2: Verify Payment
+   
+    var options = {
+      key: `${RAZORPAY_KEY_ID}`, // Your Razorpay Key ID
+      name: "Streamers.com",
+      amount: paymentData.amount, // Payment amount
+      currency: 'INR' as RazorpayOrderOptions['currency'],
+      order_id: paymentData.id, // This is the `orderId` you get from the server
+      handler: function (response:any) {
+        // This function will get the payment response from Razorpay
+        axios.post(`${BACKEND_API_URL}/verify-payment`, {
+          orderId: paymentData.id,
+          paymentId: response.razorpay_payment_id,
+          signature: response.razorpay_signature
+        }).then(res => {
+          console.log('Payment verified successfully', res.data);
+        }).catch(err => {
+          console.error('Failed to verify payment', err);
+        });
+      }
+    };
+       const rzp1= new Razorpay(options); // Open Razorpay checkout page
+       rzp1.open();
+
+    
+
     // Step 3: Get signature and upload parameters from backend
     const { data: signatureData } = await axios.get<SignatureResponse>(
       `${BACKEND_API_URL}/get-signature`
@@ -121,7 +102,7 @@ export const uploadMedia = async (
     formData.append('folder', signatureData.folder);
 
     // Step 5: Upload to Cloudinary
-    const { data: cloudinaryData } = await axios.post<CloudinaryResponse>(
+    const { data:cloudinaryData } = await axios.post<CloudinaryResponse>(
       `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/video/upload`,
       formData,
       {
@@ -133,7 +114,6 @@ export const uploadMedia = async (
         },
       }
     );
-
     // Step 6: Save upload details in backend
     const { data: backendData } = await axios.post<BackendResponse>(
       `${BACKEND_API_URL}/upload/${userId}`,
@@ -141,7 +121,7 @@ export const uploadMedia = async (
         url: cloudinaryData.secure_url,
         public_id: cloudinaryData.public_id,
         resource_type: cloudinaryData.resource_type,
-        time: videoDuration
+        time:videoDuration
       }
     );
 
@@ -149,7 +129,9 @@ export const uploadMedia = async (
     return cloudinaryData.secure_url;
 
   } catch (error) {
+    // Handle error
     if (axios.isAxiosError(error)) {
+      console.log(error)
       throw new UploadError('Failed to upload media', error);
     }
     throw new UploadError('An unknown error occurred');
