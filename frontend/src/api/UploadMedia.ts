@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
-import { BACKEND_API_URL } from '../config/env';
+import { BACKEND_API_URL, RAZORPAY_KEY_ID } from '../config/env';
+import { useRazorpay, RazorpayOrderOptions } from 'react-razorpay';
 
 // Types
 interface SignatureResponse {
@@ -40,6 +41,7 @@ export const uploadMedia = async (
   videoDuration:number,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
+  const {Razorpay}= useRazorpay();
   if (!file) {
     throw new UploadError('Please select a file to upload.');
   }
@@ -51,22 +53,38 @@ export const uploadMedia = async (
   try {
     // Step 1: Create Payment
     const { data: paymentData } = await axios.post(`${BACKEND_API_URL}/create-payment`, {
-      userId,
+      youtuberId: userId, // Changed from userId to youtuberId
       companyId,
       amount: 1000, // Specify the payment amount
       currency: 'INR' // Specify the currency
     });
+    console.log(paymentData);
+
 
     // Step 2: Verify Payment
-    const { data: verifyData } = await axios.post(`${BACKEND_API_URL}/verify-payment`, {
-      paymentId: paymentData.paymentId, // Use the paymentId returned from create-payment
-      userId,
-      companyId
-    });
+   
+    var options = {
+      key: `${RAZORPAY_KEY_ID}`, // Your Razorpay Key ID
+      name: "Streamers.com",
+      amount: paymentData.amount, // Payment amount
+      currency: 'INR' as RazorpayOrderOptions['currency'],
+      order_id: paymentData.id, // This is the `orderId` you get from the server
+      handler: function (response:any) {
+        // This function will get the payment response from Razorpay
+        axios.post(`${BACKEND_API_URL}/verify-payment`, {
+          orderId: paymentData.id,
+          paymentId: response.razorpay_payment_id,
+          signature: response.razorpay_signature
+        }).then(res => {
+          console.log('Payment verified successfully', res.data);
+        }).catch(err => {
+          console.error('Failed to verify payment', err);
+        });
+      }
+    };
+        new Razorpay(options); // Open Razorpay checkout page
 
-    if (!verifyData.success) {
-      throw new UploadError('Payment verification failed.');
-    }
+    
 
     // Step 3: Get signature and upload parameters from backend
     const { data: signatureData } = await axios.get<SignatureResponse>(

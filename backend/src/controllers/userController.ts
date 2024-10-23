@@ -90,7 +90,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
         password: hashedPassword,
       },
     });
-
+    console.log(newUser);
     return res.status(201).json({ message: 'User registration successful', user: newUser ,userType:'youtuber'});
   } catch (error) {
     console.error(error);

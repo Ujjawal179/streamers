@@ -18,7 +18,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route 
-          path="/player/:id" 
+          path="/player/:userId" 
           element={
             <Player 
               type="video" 
@@ -36,7 +36,7 @@ const App: React.FC = () => {
               <Navbar />
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/upload/:id" element={<UploadAd />} />
+                <Route path="/upload/:userId" element={<UploadAd />} />
                 {/* <Route path="/setup" element={<SetupAd />} /> */}
                 <Route 
                   path="/login" 

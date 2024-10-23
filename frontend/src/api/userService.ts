@@ -26,7 +26,7 @@ interface ApiResponse {
 
 export const registerUser = async (userData: UserData): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/register`, {
+    const response = await fetch(`${BASE_URL}/api/v1/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
 export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
   try {
     
-    const response = await axios.post<ApiResponse>(`${BASE_URL}/login`, loginData);
+    const response = await axios.post<ApiResponse>(`${BASE_URL}/api/v1/login`, loginData);
 
     const { token } = response.data as { token: string };
 

@@ -11,6 +11,7 @@ import { uploadMedia } from "../../api/UploadMedia";
 
 const UploadAd: React.FC = () => {
     const { userId } = useParams<{ userId: string }>(); // Extract userId from URL
+    console.log(userId);
     const storedUser = localStorage.getItem('user');
     const company = storedUser ? JSON.parse(storedUser) : null;
     const companyId= company?.user?.id// Replace with actual company ID, maybe from context or props

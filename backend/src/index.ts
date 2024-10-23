@@ -38,42 +38,51 @@ const razorpay = new Razorpay({
 
 // Endpoint for creating a payment order
 app.post('/create-payment', async (req, res) => {
-  const { companyId, youtuberId, amount } = req.body;
+  const { companyId, youtuberId, amount,currency } = req.body;
+
+  // Validate required fields
+  if (!companyId || !youtuberId || !amount) {
+    return res.status(400).json({ 
+      message: 'Missing required fields: companyId, youtuberId, and amount are required' 
+    });
+  }
 
   try {
-    // Create payment order in Razorpay
+    // Create a unique receipt ID using timestamp and random string
+    const timestamp = Date.now().toString().slice(-6);
+    const shortReceipt = `rcpt_${timestamp}`;
+
     const paymentOrder = await razorpay.orders.create({
       amount: amount * 100, // amount in paise
-      currency: 'INR',
-      receipt: `receipt_${youtuberId}_${companyId}`,
-      payment_capture: true // Auto-capture payment
+      currency: currency,
+      receipt: shortReceipt,
+      payment_capture: true
     });
 
-    // Save payment details in the database
     await prisma.payment.create({
       data: {
         companyId,
         youtuberId,
         amount,
         orderId: paymentOrder.id,
+        paymentId: shortReceipt,
         status: 'created',
       },
     });
 
-    res.json({
-      orderId: paymentOrder.id,
-      amount: amount,
-      currency: 'INR',
-    });
-  } catch (error) {
+    res.json(paymentOrder);
+  } catch (error:any) {
     console.error('Error creating payment order:', error);
-    res.status(500).json({ message: 'Failed to create payment order' });
+    res.status(500).json({ 
+      message: 'Failed to create payment order',
+      error: error.error?.description || error.message 
+    });
   }
 });
 
 // Endpoint for verifying and updating payment status
 app.post('/verify-payment', async (req, res) => {
-  const { orderId, paymentId, signature, videoHash, time } = req.body;
+  const { orderId, paymentId, signature } = req.body;
 
   try {
     const payment = await prisma.payment.findUnique({
@@ -140,12 +149,9 @@ app.post('/verify-payment', async (req, res) => {
         console.log('Payout created:', payoutResponse.data);
 
         // Add video to Redis queue for the YouTuber
-        await redisClient.rPush(`user:${youtuber.id}:videos`, JSON.stringify({
-          videoHash: videoHash,
-          time: time
-        }));
+       
 
-        res.json({ message: 'Payment successful, payout initiated, and video added to Redis queue' });
+        res.json({ message: 'Payment successful' });
       } else {
         res.status(500).json({ message: 'Failed to initiate payout to YouTuber' });
       }
