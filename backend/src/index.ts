@@ -31,49 +31,49 @@ app.get("/", (req, res) => {
 app.use('/api/v1', UserRouter);
 
 
-// const razorpay = new Razorpay({
-//   key_id: process.env.RAZORPAY_KEY_ID ||"",
-//   key_secret: process.env.RAZORPAY_KEY_SECRET ||"",
-// });
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID ||"",
+  key_secret: process.env.RAZORPAY_KEY_SECRET ||"",
+});
 
-// // Endpoint for creating a payment order
-// app.post('/create-payment', async (req, res) => {
-//   const { companyId, youtuberId, amount } = req.body;
+// Endpoint for creating a payment order
+app.post('/create-payment', async (req, res) => {
+  const { companyId, youtuberId, amount } = req.body;
 
-//   try {
-//     const paymentOrder = await razorpay.orders.create({
-//       amount: amount * 100, // amount in paise
-//       currency: 'INR',
-//       receipt: `receipt_${youtuberId}_${companyId}`,
-//       payment_capture: true // Auto-capture payment
+  try {
+    // Create payment order in Razorpay
+    const paymentOrder = await razorpay.orders.create({
+      amount: amount * 100, // amount in paise
+      currency: 'INR',
+      receipt: `receipt_${youtuberId}_${companyId}`,
+      payment_capture: true // Auto-capture payment
+    });
 
-//     });
+    // Save payment details in the database
+    await prisma.payment.create({
+      data: {
+        companyId,
+        youtuberId,
+        amount,
+        orderId: paymentOrder.id,
+        status: 'created',
+      },
+    });
 
-//      await prisma.payment.create({
-//       data: {
-//         companyId,
-//         youtuberId,
-//         amount,
-//         orderId: paymentOrder.id,
-//         status: 'created',
-//       },
-//     });
-    
-
-//     res.json({
-//       orderId: paymentOrder.id,
-//       amount: amount,
-//       currency: 'INR',
-//     });
-//   } catch (error) {
-//     console.error('Error creating payment order:', error);
-//     res.status(500).json({ message: 'Failed to create payment order' });
-//   }
-// });
+    res.json({
+      orderId: paymentOrder.id,
+      amount: amount,
+      currency: 'INR',
+    });
+  } catch (error) {
+    console.error('Error creating payment order:', error);
+    res.status(500).json({ message: 'Failed to create payment order' });
+  }
+});
 
 // Endpoint for verifying and updating payment status
 app.post('/verify-payment', async (req, res) => {
-  const { orderId, paymentId, signature, videoHash,time } = req.body; // videoHash is now passed by the company
+  const { orderId, paymentId, signature, videoHash, time } = req.body;
 
   try {
     const payment = await prisma.payment.findUnique({
@@ -82,30 +82,35 @@ app.post('/verify-payment', async (req, res) => {
 
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
+    // Verify Razorpay signature
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET ||"")
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || "")
       .update(orderId + '|' + paymentId)
       .digest('hex');
 
     if (signature === expectedSignature) {
-      // Update payment status
+      // Update payment status to 'paid'
       await prisma.payment.update({
         where: { orderId },
         data: { status: 'paid', paymentId },
       });
 
-      // Transfer the payment to the YouTuber's bank account using Razorpay Payout
+      // Find YouTuber details for payout
       const youtuber = await prisma.youtuber.findUnique({
         where: { id: payment.youtuberId },
       });
-      if(!youtuber){
-
-        return res.status(404).json({ message: 'Youtuber not found' });
+      if (!youtuber) {
+        return res.status(404).json({ message: 'YouTuber not found' });
       }
 
+      // Calculate 70% of the payment for the YouTuber
+      const youtuberShare =payment.amount * 0.7; // 70% to YouTuber
+      const platformShare = payment.amount * 0.3; // 30% to platform
+
+      // Manually process payout to YouTuber's bank account using Razorpay Payout API
       const payoutOptions = {
-        account_number: 'YOUR_RAZORPAY_ACCOUNT', // Your Razorpay account number
-        amount: payment.amount * 100, // Amount in paise
+        account_number: 'NZL4E084wCuKAX', // Your Razorpay account number
+        amount: youtuberShare * 100, // Amount in paise (70% of the total)
         currency: 'INR',
         purpose: 'payout',
         fund_account: {
@@ -122,29 +127,37 @@ app.post('/verify-payment', async (req, res) => {
         },
       };
 
+      // Send payout request to Razorpay
       const payoutResponse = await axios.post('https://api.razorpay.com/v1/payouts', payoutOptions, {
         auth: {
-          username: process.env.RAZORPAY_KEY_ID||"",
-          password: process.env.RAZORPAY_KEY_SECRET||""
+          username: process.env.RAZORPAY_KEY_ID || "",
+          password: process.env.RAZORPAY_KEY_SECRET || ""
         }
       });
-      console.log('Payout created:', payoutResponse);
 
-      // After successful payout, add video to Redis queue for the Youtuber
-      await redisClient.rPush(`user:${youtuber.id}:videos`, JSON.stringify({
-        videoHash: videoHash,
-        time:time
-      }));
+      // Check if payout was successful
+      if (payoutResponse.data && payoutResponse.data.status === "processed") {
+        console.log('Payout created:', payoutResponse.data);
 
-      res.json({ message: 'Payment successful, payout initiated, and video added to Redis queue' });
+        // Add video to Redis queue for the YouTuber
+        await redisClient.rPush(`user:${youtuber.id}:videos`, JSON.stringify({
+          videoHash: videoHash,
+          time: time
+        }));
+
+        res.json({ message: 'Payment successful, payout initiated, and video added to Redis queue' });
+      } else {
+        res.status(500).json({ message: 'Failed to initiate payout to YouTuber' });
+      }
     } else {
-      res.status(400).json({ message: 'Invalid signature' });
+      res.status(400).json({ message: 'Invalid payment signature' });
     }
   } catch (error) {
     console.error('Error verifying payment:', error);
     res.status(500).json({ message: 'Failed to verify payment' });
   }
 });
+
 
 app.post('/youtuber/:youtuberId/payout-details', async (req, res) => {
   const { youtuberId } = req.params;
@@ -274,7 +287,7 @@ app.get('/get-signature', (req, res) => {
 
 // Save upload details
 app.post('/upload/:userId', async (req, res) => {
-  const { url, public_id, resource_type } = req.body;
+  const { url, public_id, resource_type,time } = req.body;
   const userId = req.params.userId;
   console.log(userId)
   if (!userId || !url) {
@@ -290,6 +303,7 @@ app.post('/upload/:userId', async (req, res) => {
       public_id: public_id || null,
       resource_type: resource_type || 'video',
       uploaded_at: new Date().toISOString(),
+      time: time || null,
     };
     console.log(videoData)
     // Save to Redis with expiration (e.g., 24 hours)

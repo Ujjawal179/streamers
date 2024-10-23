@@ -10,7 +10,10 @@ import {
 import { uploadMedia } from "../../api/UploadMedia";
 
 const UploadAd: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { userId } = useParams<{ userId: string }>(); // Extract userId from URL
+    const storedUser = localStorage.getItem('user');
+    const company = storedUser ? JSON.parse(storedUser) : null;
+    const companyId= company?.user?.id// Replace with actual company ID, maybe from context or props
     const [file, setFile] = useState<File | null>(null);
     const [isHovered, setIsHovered] = useState<boolean>(false);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
@@ -20,8 +23,8 @@ const UploadAd: React.FC = () => {
         e.preventDefault();
         const droppedFile = e.dataTransfer.files[0];
         if (droppedFile) {
-          setFile(droppedFile);
-          extractVideoDuration(droppedFile);
+            setFile(droppedFile);
+            extractVideoDuration(droppedFile);
         }
         setIsHovered(false);
     };
@@ -33,8 +36,8 @@ const UploadAd: React.FC = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const uploadedFile = e.target.files?.[0];
         if (uploadedFile) {
-          setFile(uploadedFile);
-          extractVideoDuration(uploadedFile);
+            setFile(uploadedFile);
+            extractVideoDuration(uploadedFile);
         }
     };
 
@@ -51,7 +54,15 @@ const UploadAd: React.FC = () => {
         if (file) {
             setIsLoading(true);  // Set loading to true when the process starts
             try {
-                await uploadMedia(file,`${id}`);
+                if(!userId){
+                    return alert("Please provide a valid userId");
+                }
+                if (videoDuration !== null) {
+                    await uploadMedia(file, userId, companyId, videoDuration); // Pass userId and companyId
+                    alert("Media uploaded successfully!");
+                } else {
+                    alert("Failed to get video duration. Please try again.");
+                }
                 alert("Media uploaded successfully!");
             } catch (error) {
                 alert("Failed to upload media. Please try again.");
@@ -76,7 +87,7 @@ const UploadAd: React.FC = () => {
         <div style={{ minHeight: '80vh' }}>
             <Box sx={{ p: { xs: 1, sm: 2, md: 3, lg: 4 } }} alignItems={'center'}>
                 <Typography variant="h4" gutterBottom>
-                    Upload Your Advertisement for Streamer: {id}
+                    Upload Your Advertisement for Streamer: {userId}
                 </Typography>
                 <FormControl variant="standard" fullWidth>
                     <Box
@@ -119,7 +130,7 @@ const UploadAd: React.FC = () => {
                                 <p>{isHovered ? "Drop it like it's hot!" : "Drag and drop a file here or click to upload"}</p>
                             </div>
                         )}
-                        <input  type="file" accept="video/*"  onChange={handleFileChange} style={{ width: '100%', minHeight: "250px", minWidth: "300px", opacity: '0' }} />
+                        <input type="file" accept="video/*" onChange={handleFileChange} style={{ width: '100%', minHeight: "250px", minWidth: "300px", opacity: '0' }} />
                     </Box>
 
                     <Button
@@ -134,11 +145,10 @@ const UploadAd: React.FC = () => {
             </Box>
         </div>
         
-        
         <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', paddingBottom:'60px', minHeight:'80vh'}}>
             <h2 style={{textAlign:'center', padding:'5px'}}>Know More about streamer!!</h2>
             <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
-                    <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
+                <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
                 <div className="details" style={{ maxWidth: '450px', width: '60%', margin: '5px' }}>
                     <div className="name">
                         <h2 style={{ textAlign: 'center' }}>Streamer Name</h2>
