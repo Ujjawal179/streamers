@@ -9,6 +9,7 @@ interface SignatureResponse {
   folder: string;
   cloudName: string;
   apiKey: string;
+  uploadPreset: string;
 }
 
 interface CloudinaryResponse {
@@ -100,6 +101,7 @@ export const uploadMedia = async (
     formData.append('timestamp', signatureData.timestamp.toString());
     formData.append('signature', signatureData.signature);
     formData.append('folder', signatureData.folder);
+    formData.append('upload_preset', signatureData.uploadPreset);
 
     // Step 5: Upload to Cloudinary
     const { data:cloudinaryData } = await axios.post<CloudinaryResponse>(
@@ -130,6 +132,7 @@ export const uploadMedia = async (
 
   } catch (error) {
     // Handle error
+    console.log(error);
     if (axios.isAxiosError(error)) {
       console.log(error)
       throw new UploadError('Failed to upload media', error);

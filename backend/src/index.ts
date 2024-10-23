@@ -263,7 +263,7 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
 const generateCloudinarySignature = (paramsToSign: string): string => {
   return crypto
     .createHash('sha256')
-    .update(paramsToSign + process.env.CLOUDINARY_API_SECRET)
+    .update(paramsToSign+process.env.CLOUDINARY_API_SECRET)
     .digest('hex');
 };
 
