@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { BACKEND_API_URL, RAZORPAY_KEY_ID } from '../config/env';
-import { useRazorpay, RazorpayOrderOptions } from 'react-razorpay';
+import {  RazorpayOrderOptions } from 'react-razorpay';
 
 // Types
 interface SignatureResponse {
