@@ -26,7 +26,7 @@ export default class Setup extends React.Component<any, any> {
 
     constructor(props: any) {
         super(props);
-        this.state = { linear: true, submitted: true, channelLinks: [], formData: {}, paymentLink: 'Pay Link', obsLink: 'OBS LINK', error: '' };
+        this.state = { linear: true, submitted: false, channelLinks: [], formData: {}, paymentLink: 'Pay Link', obsLink: 'OBS LINK', error: '' };
         this.addChannelLink = this.addChannelLink.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleInputChange = this.handleInputChange.bind(this); // Ensure this is bound
