@@ -35,8 +35,14 @@ function a11yProps(index: number) {
     };
 }
 
-export default function DashBoard() {
+interface DashBoardProps {
+    userType: string;
+}
+
+export default function DashBoard({ userType }: DashBoardProps) {
     const [value, setValue] = React.useState<number>(0);
+    console.log(userType !== 'company');
+    console.log(userType);
 
     const handleChange = (event: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
@@ -45,35 +51,58 @@ export default function DashBoard() {
     return (
         <Box
             sx={{
-                width: "100%",
-                bgcolor: "background.default",
-                color: "text.primary",
+            width: "100%",
+            bgcolor: "background.default",
+            color: "text.primary",
             }}
         >
-            <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-                <Tabs
-                    value={value}
-                    onChange={handleChange}
-                    aria-label="trainer admin tabs"
-                >
-                    <Tab label="Profile" {...a11yProps(0)} />
-                    <Tab label="Ads Setup" {...a11yProps(1)} />
-                    <Tab label="Payments" {...a11yProps(2)} />
-                    <Tab label="Account" {...a11yProps(3)} />
-                </Tabs>
-            </Box>
-            <CustomTabPanel value={value} index={0} style={{ minHeight: "85vh" }}>
-                <Profile />
-            </CustomTabPanel>
-            <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
-                <BillingAdress />
-            </CustomTabPanel>
-            <CustomTabPanel value={value} index={2} style={{ minHeight: "85vh" }}>
-                <Payment />
-            </CustomTabPanel>
-            <CustomTabPanel value={value} index={3} style={{ minHeight: "85vh" }}>
-                <Account />
-            </CustomTabPanel>
+            {userType !== "company" ? (
+                <>
+                    <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                        <Tabs
+                            value={value}
+                            onChange={handleChange}
+                            aria-label="trainer admin tabs"
+                        >
+                            <Tab label="Profile" {...a11yProps(0)} />
+                            <Tab label="Billing Address" {...a11yProps(1)} />
+                            <Tab label="Payments" {...a11yProps(2)} />
+                            <Tab label="Account" {...a11yProps(3)} />
+                        </Tabs>
+                    </Box>
+                    <CustomTabPanel value={value} index={0} style={{ minHeight: "85vh" }}>
+                        <Profile />
+                    </CustomTabPanel>
+                    <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
+                        <BillingAdress />
+                    </CustomTabPanel>
+                    <CustomTabPanel value={value} index={2} style={{ minHeight: "85vh" }}>
+                        <Payment />
+                    </CustomTabPanel>
+                    <CustomTabPanel value={value} index={3} style={{ minHeight: "85vh" }}>
+                        <Account />
+                    </CustomTabPanel>
+                </>
+            ) : (
+                <>
+                    <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                        <Tabs
+                            value={value}
+                            onChange={handleChange}
+                            aria-label="company admin tabs"
+                        >
+                            <Tab label="Payments" {...a11yProps(0)} />
+                            <Tab label="Account" {...a11yProps(1)} />
+                        </Tabs>
+                    </Box>
+                    <CustomTabPanel value={value} index={0} style={{ minHeight: "85vh" }}>
+                        <Payment />
+                    </CustomTabPanel>
+                    <CustomTabPanel value={value} index={1} style={{ minHeight: "85vh" }}>
+                        <Account />
+                    </CustomTabPanel>
+                </>
+            )}
         </Box>
     );
 }

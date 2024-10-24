@@ -31,7 +31,12 @@ const SignUp: React.FC = () => {
         try {
           const result = await registerUser({name, email, password, userType});
           setError(null);
-          window.location.href = '/setup';
+        if (userType === 'youtuber') {
+            window.location.href = '/setup';
+        }
+        else{
+          window.location.href = '/';
+        }
         } catch (error: any) {
           setError(error.message);
         }

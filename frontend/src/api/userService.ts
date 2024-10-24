@@ -22,6 +22,7 @@ interface LoginData {
   userType: string;
 }
 interface ApiResponse {
+  userType?: string;
   success?: boolean;
   message?: string;
   errors?: { path: string; message: string }[];
@@ -50,7 +51,7 @@ export const registerUser = async (userData: any): Promise<ApiResponse> => {
       const errorMessage = data.message || data.errors?.[0].message || 'Registration failed';
       throw new Error(errorMessage);
     }
-    console.log(JSON.stringify(data));
+    data.user.userType = data.userType;
     localStorage.setItem('user', JSON.stringify(data.user));
 
     return data;
@@ -78,6 +79,7 @@ export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
     }
     const data = await response.json();
     data.success = true;
+    data.user.userType = data.userType;
     localStorage.setItem('user', JSON.stringify(data.user));
     
     return data;

@@ -30,7 +30,7 @@ function Login() {
     
         if (result.success) {
           // Redirect to another page, like the dashboard
-          window.location.href = '/dashboard'; // You can use React Router to navigate instead
+          window.location.href = '/'; // You can use React Router to navigate instead
         } else {
           // Display the error message
           setError(result.message ?? null);

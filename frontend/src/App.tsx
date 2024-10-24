@@ -13,7 +13,9 @@ import DashBoard from './pages/DashBoard/DashBoard';
 import Setup from './pages/Setup/Setup';
 
 const App: React.FC = () => {
-  const isLoggedIn = !!localStorage.getItem('user');
+  const user = localStorage.getItem('user');
+  const userType = user ? JSON.parse(user).userType : null;
+  const isLoggedIn = !!user;
   return (
     <Router>
       <Routes>
@@ -36,7 +38,10 @@ const App: React.FC = () => {
               <Navbar />
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/upload/:userId" element={<UploadAd />} />
+                <Route path="/upload/:userId"
+                 element={
+                 isLoggedIn ? <UploadAd />: <Navigate to="/signup" />
+                } />
                 {/* <Route path="/setup" element={<SetupAd />} /> */}
                 <Route 
                   path="/login" 
@@ -53,7 +58,7 @@ const App: React.FC = () => {
                 <Route 
                   path="/dashboard" 
                   element={
-                  isLoggedIn ? <DashBoard /> : <Navigate to="/signup" />
+                  isLoggedIn ? <DashBoard userType={userType} /> : <Navigate to="/signup" />
                   } 
                 />
                 <Route 
