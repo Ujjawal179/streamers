@@ -58,28 +58,31 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
 // Login a user
 export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
   try {
+    const response = await fetch(`${BASE_URL}/api/v1/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(loginData),
+    });
+
+    // Check if the response is ok
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Login failed');
+    }
+    const data = await response.json();
+    data.success = true;
+    localStorage.setItem('user', JSON.stringify(data));
     
-    const response = await axios.post<ApiResponse>(`${BASE_URL}/api/v1/login`, loginData);
-
-    const { token } = response.data as { token: string };
-
-    // If login is successful, store the token in localStorage
-    if (token) {
-      console.log(JSON.stringify(token));
-      localStorage.setItem('user', JSON.stringify(token));
-      return { success: true, message: 'Login successful', token };
-    } else {
-      return { success: false, message: 'Login failed' };
-    }
+    return data;
   } catch (error) {
-    console.error('Login error:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      return { success: false, message: error.response.data.message || 'Login failed' };
-    }
-    const errorMessage = (error as any).message || (error as any).errors?.[0].message || 'Registration failed';
-    throw new Error(errorMessage);
+    console.error('Error during login:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: errorMessage };
   }
-};
+}
+
 
 // // Logout a user
 // export const logoutUser = async (): Promise<ApiResponse> => {

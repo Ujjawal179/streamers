@@ -34,6 +34,7 @@ function Login() {
         } else {
           // Display the error message
           setError(result.message ?? null);
+          console.error(result);
         }
       };
 

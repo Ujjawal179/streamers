@@ -87,7 +87,7 @@ const UploadAd: React.FC = () => {
 
     return (
         <>
-        <div style={{ minHeight: '80vh' }}>
+        <div style={{ minHeight: '95vh' }}>
             <Box sx={{ p: { xs: 1, sm: 2, md: 3, lg: 4 } }} alignItems={'center'}>
                 <Typography variant="h4" gutterBottom>
                     Upload Your Advertisement for Streamer: {userId}
@@ -148,7 +148,7 @@ const UploadAd: React.FC = () => {
             </Box>
         </div>
         
-        <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', paddingBottom:'60px', minHeight:'80vh'}}>
+        {/* <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', paddingBottom:'60px', minHeight:'80vh'}}>
             <h2 style={{textAlign:'center', padding:'5px'}}>Know More about streamer!!</h2>
             <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
                 <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
@@ -172,7 +172,7 @@ const UploadAd: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div> */}
         </>
     );
 };

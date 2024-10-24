@@ -63,7 +63,7 @@ export default class Setup extends React.Component<any, any> {
                     <IgrStep key="ad-setup">
                         <span key="ad-title" slot="title">Ad Setup</span>
                         <form ref={this.AddressForm}>
-                            <IgrInput required label="Cost per Second" type="number" name="" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Cost per Second" type="number" name="cost-per-second" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
                             <IgrInput required label="Time Gap between 2 Ads" type="number" name="" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
                             {/* <IgrInput required label="Street" type="text" name="street" value={this.state.formData.street || ''} onInput={this.handleInputChange}></IgrInput> */}
                             <IgrButton clicked={this.onPreviousStep}><span key="address-prev">PREVIOUS</span></IgrButton>

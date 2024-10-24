@@ -39,7 +39,7 @@ const Profile: React.FC = () => {
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <TextField variant="standard" required label="Name" type="text" name="name" value={Name} onChange={(e) => setName(e.target.value)} />
       <TextField variant="standard" label="Phone Number (with country code)" type="text" name="phoneNum" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-      <TextField variant="standard" required label="About" type="textarea" multiline name="about" value={about || ''} onChange={(e) => setAbout(e.target.value)} />
+      {/* <TextField variant="standard" required label="About" type="textarea" multiline name="about" value={about || ''} onChange={(e) => setAbout(e.target.value)} /> */}
       <TextField variant="standard" required label="Channel Link" type="text" name="mandatoryChannelLink" value={channelLinks[0] || ''} onChange={(e) => handleChannelLinkChange(e)} />
       {/* {channelLinks.slice(1).map((link, index) => (
       <TextField variant="standard" key={index + 1} label={`Channel Link ${index + 2}`} type="text" value={link} onChange={(e) => handleChannelLinkChange(e, index + 1)} />
