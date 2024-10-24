@@ -5,12 +5,16 @@ import {
 const BASE_URL: string = BACKEND_API_URL ; // Replace with your actual backend URL
 
 // Type definitions (adjust these based on your actual API response and request types)
-interface UserData {
-  name: string;
-  email: string; // Updated to use phone number
-  password: string;
-  userType: string;
-}
+// interface UserData {
+//   id?: string;
+//   name: string;
+//   email: string; // Updated to use phone number
+//   password: string;
+//   userType: string;
+//   ifsc: string;
+//   accountNumber: string;
+//   channelLink: String;
+// }
 
 interface LoginData {
   email: string; // Updated to use phone number
@@ -22,9 +26,10 @@ interface ApiResponse {
   message?: string;
   errors?: { path: string; message: string }[];
   token?: string; // Add token property
+  user?: any; // Add user property
 }
 
-export const registerUser = async (userData: UserData): Promise<ApiResponse> => {
+export const registerUser = async (userData: any): Promise<ApiResponse> => {
   try {
     const response = await fetch(`${BASE_URL}/api/v1/register`, {
       method: 'POST',
@@ -46,7 +51,7 @@ export const registerUser = async (userData: UserData): Promise<ApiResponse> => 
       throw new Error(errorMessage);
     }
     console.log(JSON.stringify(data));
-    localStorage.setItem('user', JSON.stringify(data));
+    localStorage.setItem('user', JSON.stringify(data.user));
 
     return data;
   } catch (error) {
@@ -73,7 +78,7 @@ export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
     }
     const data = await response.json();
     data.success = true;
-    localStorage.setItem('user', JSON.stringify(data));
+    localStorage.setItem('user', JSON.stringify(data.user));
     
     return data;
   } catch (error) {
@@ -107,12 +112,12 @@ export const logoutUser = () => {
 
 
 // Update user data
-export const updateUser = async (userData: UserData): Promise<ApiResponse> => {
+export const updateUser = async (userData: any) => {
   try {
-    const response = await axios.put<ApiResponse>(`${BASE_URL}/update`, userData, {
-      withCredentials: true, // To send cookies with the request
-    });
-    return response.data;
+    const id = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '';
+    // console.log(`${BASE_URL}/youtuber/${id}/update`);
+    const response = await axios.put<ApiResponse>(`${BASE_URL}/youtuber/${id}/update`, userData);
+    return response;
   } catch (error) {
     console.error('Error updating user:', error);
     if (axios.isAxiosError(error) && error.response) {

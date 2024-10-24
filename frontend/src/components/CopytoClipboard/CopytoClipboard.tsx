@@ -16,7 +16,11 @@ const CopyToClipboard: React.FC<CopyToClipboardProps> = ({ text, style }) => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    return <Button style={style} onClick={handleClick}>{copied ? 'Copied' : 'Copy'}</Button>
+    return (
+        <Button style={{ ...style, backgroundColor: 'white', marginLeft:'-85px' }} onClick={handleClick}>
+            {copied ? 'Copied' : 'Copy'}
+        </Button>
+    );
 }
 
 export default CopyToClipboard

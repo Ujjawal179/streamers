@@ -8,6 +8,8 @@ import 'igniteui-webcomponents/themes/light/bootstrap.css';
 import CopyToClipboard from '../../components/CopytoClipboard/CopytoClipboard';
 import { TextField } from '@mui/material';
 import './index.css';
+import { updateUser } from '../../api/userService';
+import { error } from 'console';
 
 IgrStepperModule.register();
 IgrSwitchModule.register();
@@ -24,7 +26,7 @@ export default class Setup extends React.Component<any, any> {
 
     constructor(props: any) {
         super(props);
-        this.state = { linear: true, submitted: false, channelLinks: [], formData: {}, paymentLink: 'Pay Link', obsLink: 'OBS LINK' };
+        this.state = { linear: true, submitted: true, channelLinks: [], formData: {}, paymentLink: 'Pay Link', obsLink: 'OBS LINK', error: '' };
         this.addChannelLink = this.addChannelLink.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleInputChange = this.handleInputChange.bind(this); // Ensure this is bound
@@ -44,28 +46,31 @@ export default class Setup extends React.Component<any, any> {
 
 
     public render(): JSX.Element {
+        if (window.innerWidth < 500) {
+            return (
+                <>
+                <div className="container">
+                    <h2 style={{textAlign:'center'}}>Please switch to a bigger screen for setup.</h2>
+                </div>
+                </>
+            );
+        }
+
         return (
             <div className="container">
                 <IgrStepper ref={this.stepperRef} linear={this.state.linear}>
                     <IgrStep key="info-step" >
                         <span key="info-title" slot="title">Personal Info</span>
                         <form ref={this.InfoForm}>
-                            {/* <IgrInput label="Phone Number (with country code)" type="text" name="name" value={this.state.formData.phoneNum || ''} onInput={this.handleInputChange}></IgrInput> */}
-                            {/* <IgrTextarea required label="About" type="textarea" name="about" value={this.state.formData.about || ''} onInput={this.handleInputChange}></IgrTextarea> */}
-                            <IgrInput required label="Channel Link" type="text" name="channelLink" value={this.state.formData.mandatoryChannelLink || ''} onInput={this.handleInputChange} />
-                            {/* {this.renderChannelLinks()}
-                            {this.state.channelLinks.length < 2 && (
-                                <IgrButton clicked={this.addChannelLink}><span key="add-channel-link">Add Channel Link</span></IgrButton>
-                            )} */}
+                            <IgrInput required label="Channel Link" type="text" name="channelLink" value={this.state.formData.channelLink || ''} onInput={this.handleInputChange} />
                             <IgrButton clicked={this.onNextStep}><span key="info-next">NEXT</span></IgrButton>
                         </form>
                     </IgrStep>
                     <IgrStep key="ad-setup">
                         <span key="ad-title" slot="title">Ad Setup</span>
                         <form ref={this.AddressForm}>
-                            <IgrInput required label="Cost per Second" type="number" name="cost-per-second" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="Time Gap between 2 Ads" type="number" name="" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
-                            {/* <IgrInput required label="Street" type="text" name="street" value={this.state.formData.street || ''} onInput={this.handleInputChange}></IgrInput> */}
+                            <IgrInput required label="Cost per Second" type="number" name="costpersecond" value={this.state.formData.costpersecond || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Time Gap between 2 Ads" type="number" name="timeGap" value={this.state.formData.timeGap || ''} onInput={this.handleInputChange}></IgrInput>
                             <IgrButton clicked={this.onPreviousStep}><span key="address-prev">PREVIOUS</span></IgrButton>
                             <IgrButton clicked={this.onNextStep}><span key="address-next">NEXT</span></IgrButton>
                         </form>
@@ -73,8 +78,9 @@ export default class Setup extends React.Component<any, any> {
                     <IgrStep key="payment-step">
                         <span key="payment-title" slot="title">Payment</span>
                         <form>
-                        <IgrInput required label="IFSC Code" type="text" name="ifsc" value={this.state.formData.ifscCode || ''} onInput={this.handleInputChange}></IgrInput>
-                        <IgrInput required label="Account Number" type="number" name="accountNumber" value={this.state.formData.accNum || ''} onInput={this.handleInputChange}></IgrInput>
+                        <IgrInput required label="IFSC Code" type="text" name="ifsc" value={this.state.formData.ifsc || ''} onInput={this.handleInputChange}></IgrInput>
+                        <IgrInput required label="Account Number" type="number" name="accountNumber" value={this.state.formData.accountNumber || ''} onInput={this.handleInputChange}></IgrInput>
+                        {this.state.error && <p style={{ color: 'red' }}>{this.state.error}</p>}
                         <IgrButton clicked={this.onPreviousStep}><span key="payment-prev">PREVIOUS</span></IgrButton>
                         <IgrButton clicked={this.handleSubmit}><span key="payment-submit">SUBMIT</span></IgrButton>
                         </form>
@@ -84,17 +90,15 @@ export default class Setup extends React.Component<any, any> {
                         <h2>Congratulation on completing setup!!</h2>
                         <p key="status-content">Now you are eligible for adding streamers to your OBS studio and start monetizing your streams.</p>
                         <div className="links">
-                        <div className="obs-link-box"  style={{ display: 'flex', alignItems: 'center' }}>
-                            <TextField value={this.state.obsLink} InputProps={{ readOnly: true }} style={{minWidth:'350px',}} />
-                            <CopyToClipboard text={this.state.obsLink} style={{ marginLeft:'-85px'}}/>
+                        <div className="obs-link-box"  style={{ width: "100%", display: 'flex', alignItems: 'center' }}>
+                            <TextField value={this.state.obsLink} InputProps={{ readOnly: true }} style={{ width: "50%", minWidth:'350px',}} />
+                            <CopyToClipboard text={this.state.obsLink} />
                         </div>
-                        <div className="payment-link-box" style={{ display: 'flex', alignItems: 'center' }}>
-                            <TextField value={this.state.paymentLink} InputProps={{ readOnly: true }} style={{ minWidth: '350px' }} />
-                            <CopyToClipboard text={this.state.paymentLink} style={{marginLeft: '-85px' }} />
+                        <div className="payment-link-box" style={{ width: "100%", display: 'flex', alignItems: 'center' }}>
+                            <TextField value={this.state.paymentLink} InputProps={{ readOnly: true }} style={{ width: "50%", minWidth: '350px' }} />
+                            <CopyToClipboard text={this.state.paymentLink}  />
                         </div>
                         </div>
-                        <IgrButton clicked={this.onPreviousStep}><span key="status-prev">PREVIOUS</span></IgrButton>
-                        <IgrButton clicked={this.onResetStepper}><span key="status-reset">HOME</span></IgrButton>
                     </IgrStep>
                 </IgrStepper>
             </div>
@@ -103,6 +107,7 @@ export default class Setup extends React.Component<any, any> {
 
     private handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
+        console.log('Name:', name, 'Value:', value);
         this.setState((prevState: any) => ({
             formData: {
                 ...prevState.formData,
@@ -113,37 +118,59 @@ export default class Setup extends React.Component<any, any> {
     
 
     private async handleSubmit() {
-        const apiUrl = 'https://your-api-endpoint.com/submit'; // Replace with your API endpoint
-        this.setState({ 
-            obsLink: 'https://obs-linfveeeeeeek.com', 
-            paymentLink: 'https://Payfveeeeeeement-link.com' 
-        }, () => {
+        try {
+            const missingFields = ['ifsc', 'accountNumber', 'costpersecond', 'timeGap', 'channelLink']
+                .filter(field => !this.state.formData[field]);
+
+            if (missingFields.length > 0) {
+                console.log(missingFields);
+                this.setState({ error: 'Please fill in all required fields' });
+                return;
+            }
+
             console.log('Form Data:', JSON.stringify(this.state.formData)); // Log after state update
             // Proceed with the API request
-            this.submitForm(apiUrl);
-        });
-    }
-    
-    private async submitForm(apiUrl: string) {
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(this.state.formData),
-            });
-    
-            if (response.ok) {
-                console.log('Form submitted successfully');
-                this.setState({ submitted: true }, this.onNextStep);
+            const response = await updateUser(this.state.formData);
+
+            if (response.status === 200) {
+                const id = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '';
+                this.setState({
+                    submitted: true,
+                    error: 'Form submitted successfully',
+                    obsLink: `Streamers.media/${id}`,
+                    paymentLink: `Streamers.media/upload/${id}`,
+                }, this.onNextStep);
             } else {
-                console.log('Failed to submit form');
+                this.setState({ error: 'Failed to submit form' });
             }
+
         } catch (error) {
             console.error('Error during form submission:', error);
+            this.setState({ error: 'Error during form submission' });
         }
-    }
+    };
+    
+    // private async submitForm(updatedForm: any) {
+    //     try {
+    //         const apiUrl = 'https://your-api-endpoint.com/submit'; // Replace with your API endpoint
+    //         const response = await fetch(apiUrl, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify(updatedForm),
+    //         });
+    
+    //         if (response.ok) {
+    //             console.log('Form submitted successfully');
+    //             this.setState({ submitted: true }, this.onNextStep);
+    //         } else {
+    //             console.log('Failed to submit form');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error during form submission:', error);
+    //     }
+    // }
     
 
     private onNextStep = () => {
