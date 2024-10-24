@@ -206,6 +206,13 @@ app.get('/youtuber/:youtuberId/payments', async (req, res) => {
   try {
     const payments = await prisma.payment.findMany({
       where: { youtuberId },
+      select: {
+        amount: true,
+        currency: true,
+        status: true,
+        orderId: true,
+        createdAt: true,
+      },
     });
     res.json(payments);
   } catch (error) {
@@ -213,6 +220,7 @@ app.get('/youtuber/:youtuberId/payments', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch payments' });
   }
 });
+
 
 
 

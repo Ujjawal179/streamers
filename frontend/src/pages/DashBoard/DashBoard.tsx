@@ -57,7 +57,7 @@ export default function DashBoard() {
                     aria-label="trainer admin tabs"
                 >
                     <Tab label="Profile" {...a11yProps(0)} />
-                    <Tab label="Billing" {...a11yProps(1)} />
+                    <Tab label="Ads Setup" {...a11yProps(1)} />
                     <Tab label="Payments" {...a11yProps(2)} />
                     <Tab label="Account" {...a11yProps(3)} />
                 </Tabs>

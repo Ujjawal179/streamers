@@ -50,42 +50,31 @@ export default class Setup extends React.Component<any, any> {
                     <IgrStep key="info-step" >
                         <span key="info-title" slot="title">Personal Info</span>
                         <form ref={this.InfoForm}>
-                            <IgrInput label="Phone Number (with country code)" type="text" name="phoneNum" value={this.state.formData.phoneNum || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrTextarea required label="About" type="textarea" name="about" value={this.state.formData.about || ''} onInput={this.handleInputChange}></IgrTextarea>
-                            <IgrInput required label="Channel Link 1" type="text" name="mandatoryChannelLink" value={this.state.formData.mandatoryChannelLink || ''} onInput={this.handleInputChange} />
-                            {this.renderChannelLinks()}
+                            {/* <IgrInput label="Phone Number (with country code)" type="text" name="name" value={this.state.formData.phoneNum || ''} onInput={this.handleInputChange}></IgrInput> */}
+                            {/* <IgrTextarea required label="About" type="textarea" name="about" value={this.state.formData.about || ''} onInput={this.handleInputChange}></IgrTextarea> */}
+                            <IgrInput required label="Channel Link" type="text" name="channelLink" value={this.state.formData.mandatoryChannelLink || ''} onInput={this.handleInputChange} />
+                            {/* {this.renderChannelLinks()}
                             {this.state.channelLinks.length < 2 && (
                                 <IgrButton clicked={this.addChannelLink}><span key="add-channel-link">Add Channel Link</span></IgrButton>
-                            )}
+                            )} */}
                             <IgrButton clicked={this.onNextStep}><span key="info-next">NEXT</span></IgrButton>
                         </form>
                     </IgrStep>
                     <IgrStep key="ad-setup">
                         <span key="ad-title" slot="title">Ad Setup</span>
                         <form ref={this.AddressForm}>
-                            <IgrInput required label="City" type="text" name="city" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="Street" type="text" name="street" value={this.state.formData.street || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Cost per Second" type="number" name="" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Time Gap between 2 Ads" type="number" name="" value={this.state.formData.city || ''} onInput={this.handleInputChange}></IgrInput>
+                            {/* <IgrInput required label="Street" type="text" name="street" value={this.state.formData.street || ''} onInput={this.handleInputChange}></IgrInput> */}
                             <IgrButton clicked={this.onPreviousStep}><span key="address-prev">PREVIOUS</span></IgrButton>
                             <IgrButton clicked={this.onNextStep}><span key="address-next">NEXT</span></IgrButton>
-                        </form>
-                    </IgrStep>
-                    <IgrStep key="billing-step">
-                        <span key="billing-title" slot="title">Billing address</span>
-                        <form>
-                            <IgrInput label="Company (optional)" type="text" name="billCompany" value={this.state.formData.billCompany || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="Street" type="text" name="billStreet" value={this.state.formData.billStreet || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="City, State" type="text" name="billCity" value={this.state.formData.billCity || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="ZIP" type="number" name="billZip" value={this.state.formData.billZip || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="Country" type="text" name="billCountry" value={this.state.formData.billCountry || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrButton clicked={this.onPreviousStep}><span key="billing-prev">PREVIOUS</span></IgrButton>
-                            <IgrButton clicked={this.onNextStep}><span key="billing-next">NEXT</span></IgrButton>
                         </form>
                     </IgrStep>
                     <IgrStep key="payment-step">
                         <span key="payment-title" slot="title">Payment</span>
                         <form>
-                        <IgrInput required label="IFSC Code" type="text" name="ifscCode" value={this.state.formData.ifscCode || ''} onInput={this.handleInputChange}></IgrInput>
-                        <IgrInput required label="Account Number" type="number" name="accNum" value={this.state.formData.accNum || ''} onInput={this.handleInputChange}></IgrInput>
+                        <IgrInput required label="IFSC Code" type="text" name="ifsc" value={this.state.formData.ifscCode || ''} onInput={this.handleInputChange}></IgrInput>
+                        <IgrInput required label="Account Number" type="number" name="accountNumber" value={this.state.formData.accNum || ''} onInput={this.handleInputChange}></IgrInput>
                         <IgrButton clicked={this.onPreviousStep}><span key="payment-prev">PREVIOUS</span></IgrButton>
                         <IgrButton clicked={this.handleSubmit}><span key="payment-submit">SUBMIT</span></IgrButton>
                         </form>

@@ -6,17 +6,21 @@ const Profile: React.FC = () => {
   const [Name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<number | string>();
   const [about, setAbout] = useState< string>("");
-  const [channelLinks, setChannelLinks] = useState<string[]>([]);
+  const [channelLinks, setChannelLinks] = useState<string>("");
 
-  const addChannelLink = () => {
-    setChannelLinks([...channelLinks, ""]);
-  };
+  // const addChannelLink = () => {
+  //   setChannelLinks([...channelLinks, ""]);
+  // };
 
-  const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
-      const newChannelLinks = [...channelLinks];
-      newChannelLinks[index] = e.target.value;
-      setChannelLinks(newChannelLinks);
-    };
+  // const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
+  //     const newChannelLinks = [...channelLinks];
+  //     newChannelLinks[index] = e.target.value;
+  //     setChannelLinks(newChannelLinks);
+  //   };
+
+  const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setChannelLinks(e.target.value);
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -36,13 +40,13 @@ const Profile: React.FC = () => {
       <TextField variant="standard" required label="Name" type="text" name="name" value={Name} onChange={(e) => setName(e.target.value)} />
       <TextField variant="standard" label="Phone Number (with country code)" type="text" name="phoneNum" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
       <TextField variant="standard" required label="About" type="textarea" multiline name="about" value={about || ''} onChange={(e) => setAbout(e.target.value)} />
-      <TextField variant="standard" required label="Channel Link 1" type="text" name="mandatoryChannelLink" value={channelLinks[0] || ''} onChange={(e) => handleChannelLinkChange(e, 0)} />
-      {channelLinks.slice(1).map((link, index) => (
+      <TextField variant="standard" required label="Channel Link" type="text" name="mandatoryChannelLink" value={channelLinks[0] || ''} onChange={(e) => handleChannelLinkChange(e)} />
+      {/* {channelLinks.slice(1).map((link, index) => (
       <TextField variant="standard" key={index + 1} label={`Channel Link ${index + 2}`} type="text" value={link} onChange={(e) => handleChannelLinkChange(e, index + 1)} />
       ))}
       {channelLinks.length < 3 && (
       <Button onClick={addChannelLink}>Add Channel Link</Button>
-      )}
+      )} */}
       <Button type="submit">Submit</Button>
     </form>
     </div>

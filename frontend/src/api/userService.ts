@@ -149,3 +149,31 @@ export const getUserById = async (userId: string): Promise<ApiResponse> => {
 //     throw new Error('Server error');
 //   }
 // };
+
+
+
+export async function fetchPaymentsForYoutuber(youtuberId: string) {
+  try {
+    const response = await fetch(`${BASE_URL}/youtuber/${youtuberId}/payments`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch payments: ${response.statusText}`);
+    }
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Unexpected response format: Expected JSON');
+    }
+
+    const payments = await response.json();
+    return payments;
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    return null;  // Handle error or show a message in the UI
+  }
+}
