@@ -41,7 +41,8 @@ const Footer: React.FC = () => {
                 </div>
             </div>
             <div className={styles.footerBottom}>
-                <p>&copy; All Rights Reserved | <a href="#privacy-policy">Privacy Policy</a></p>
+                <p>&copy; All Rights Reserved | <a href="/privacy-policy">Privacy Policy</a></p>
+                <p>Copyright &copy; MarkupX brands technolgies private limited 2024-2034 </p>
             </div>
         </footer>
     );
