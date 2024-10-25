@@ -68,7 +68,7 @@ const Player = ({ type, size, position, media, time }: PlayerProps) => {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: '#000',
+    // backgroundColor: '#000',
   };
 
   const videoContainerStyle: React.CSSProperties = {

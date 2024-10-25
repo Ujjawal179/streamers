@@ -11,6 +11,7 @@ import React from 'react';
 import Navbar from './components/Navbar/Navbar';
 import DashBoard from './pages/DashBoard/DashBoard';
 import Setup from './pages/Setup/Setup';
+import Page from './components/Page/Page';
 
 const App: React.FC = () => {
   const user = localStorage.getItem('user');
@@ -67,6 +68,11 @@ const App: React.FC = () => {
                   isLoggedIn ? <Setup /> : <Navigate to="/signup" />
                   } 
                 />
+                <Route path='privacy-policy' element={<Page page={"privacy-policy"}/>} />
+                <Route path='terms-of-service' element={<Page page={"terms-of-service"}/>} />
+                <Route path='content-guidelines' element={<Page page={"content-guidelines"}/>} />
+                <Route path='contact-us' element={<Page page={"contact-us"}/>} />
+                <Route path='cancellation-and-refund-policy' element={<Page page={"cancellation-and-refund-policy"}/>} />
                 <Route path="*" element={<h1>404 Not Found</h1>} />
               </Routes>
               <Footer />

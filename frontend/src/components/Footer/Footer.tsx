@@ -4,29 +4,29 @@ import { FaFacebookF, FaTwitter, FaGooglePlusG, FaTelegramPlane } from 'react-ic
 
 const Footer: React.FC = () => {
     return (
-        <footer className={styles.footer}>
+        <footer className={styles.footer} style={{WebkitTapHighlightColor: 'transparent'}}>
             <div className={styles.footerContainer}>
                 <div className={styles.footerColumn}>
                     <h2 className='logo'>STREAMERS</h2>
-                    <p>Your one-stop shop for the latest smartphones and accessories.</p>
+                    <p>We enable creators to sell slots for Branded Content on their live channels. Directly, and within seconds.</p>
                 </div>
 
                 <div className={styles.footerColumn}>
                     <h4>Quick Links</h4>
                     <ul>
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#products">Products</a></li>
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#contact">Contact</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#about">Somthing New</a></li>
+                        <li><a href="/contact-us">Contact Us</a></li>
                     </ul>
                 </div>
 
                 <div className={styles.footerColumn}>
-                    <h4>Contact Us</h4>
+                    <h4>Policies</h4>
                     <ul>
-                        <li>Email: support@vv.com</li>
-                        <li>Phone: +855 (123) 123-123</li>
-                        <li>Address: nv pp yg ng</li>
+                        <li><a href="privacy-policy">Privacy Policy</a></li>
+                        <li><a href="terms-of-service">Terms of Service</a></li>
+                        <li><a href="content-guidelines">Content Guidelines</a></li>
+                        <li><a href="cancellation-and-refund-policy">Cancellation and Refund Policy</a></li>
                     </ul>
                 </div>
 
