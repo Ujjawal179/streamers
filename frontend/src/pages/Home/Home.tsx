@@ -123,7 +123,8 @@ const Home: React.FC = () => {
                     padding: '20px',
                     border: '1px solid black',
                     borderRadius: '10px',
-                    boxShadow: 'rgb(88 118 222) 9px 9px 0px, rgb(68 78 129) 19px 19px 0px'
+                    boxShadow: 'rgb(88 118 222) 9px 9px 0px, rgb(68 78 129) 19px 19px 0px',
+                    margin: '20px',
                 }}>
                     <div className="info">
                         <h3>Deal Calculator</h3>
@@ -133,28 +134,28 @@ const Home: React.FC = () => {
                     <div className="input" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <TextField
                             id="charge"
-                            label="Charge of the streamer"
+                            label="Streamer's Charge"
                             variant="outlined"
                             value={charge}
                             onChange={handleChargeChange}
-                            style={{ width: '100%', maxWidth:'300px' }}/>
+                            style={{ width: '100%'}}/>
                         <TextField
                             id="duration"
-                            label="Duration of the Advertisement"
+                            label="Advertisement Duration"
                             variant="outlined"
                             value={duration}
                             onChange={handleDurationChange}
-                            style={{ width: '100%', maxWidth:'300px' }}/>
+                            style={{ width: '100%'}}/>
                         
                         <Box
                             sx={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: '10px',
+                                gap: '20px',
                                 alignItems: 'center',
                                 maxWidth: '300px',
                                 border: '1px dashed black',
-                                padding: '10px'
+                                padding: '10px',
                             }}
                         >
                             <div>Advertisement Charges: </div>

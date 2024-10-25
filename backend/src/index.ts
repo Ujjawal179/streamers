@@ -226,7 +226,7 @@ app.get('/youtuber/:youtuberId/payments', async (req, res) => {
 
 app.put('/youtuber/:youtuberId/update', async (req, res) => {
   const { youtuberId } = req.params;
-  const { name, password, channelLink, email, ifsc, accountNumber } = req.body;
+  const { name, password, channelLink, email, ifsc, accountNumber, timeout, charge, phoneNumber } = req.body;
 
   try {
     // Find the YouTuber by ID
@@ -245,6 +245,9 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
     if (channelLink) updateData.channelLink = channelLink;
     if (ifsc) updateData.ifsc = ifsc;  // Assuming the IFSC and accountNumber fields exist in the database
     if (accountNumber) updateData.accountNumber = accountNumber;
+    if (timeout) updateData.timeout = timeout;
+    if (charge) updateData.charge = charge;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
 
     // Hash the password if it is provided
     if (password) {

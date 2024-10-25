@@ -28,6 +28,7 @@ interface ApiResponse {
   errors?: { path: string; message: string }[];
   token?: string; // Add token property
   user?: any; // Add user property
+  youtuber?: any;
 }
 
 export const registerUser = async (userData: any): Promise<ApiResponse> => {

@@ -6,19 +6,9 @@ import { updateUser } from "../../api/userService";
 const Profile: React.FC = () => {
   const [Name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<number | string>();
-  // const [about, setAbout] = useState< string>("");
   const [channelLinks, setChannelLinks] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // const addChannelLink = () => {
-  //   setChannelLinks([...channelLinks, ""]);
-  // };
-
-  // const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
-  //     const newChannelLinks = [...channelLinks];
-  //     newChannelLinks[index] = e.target.value;
-  //     setChannelLinks(newChannelLinks);
-  //   };
 
   const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setChannelLinks(e.target.value);
@@ -30,6 +20,8 @@ const Profile: React.FC = () => {
       const response = await updateUser({ Name, phoneNumber, channelLinks });
       if (response.status === 200) {
         setError("Details updated successfully");
+        
+        localStorage.setItem('user', JSON.stringify(response.data.youtuber));
           } else {
             setError(`Error updating details`);
           }

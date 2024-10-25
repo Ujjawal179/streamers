@@ -15,6 +15,9 @@ model Youtuber {
   ifsc        String?
   accountNumber String?
   channelLink String?
+  phoneNumber String?
+  timeout     Int?
+  charge      Int?
   payment Payment[]
 }
 

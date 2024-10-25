@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     IgrStepper, IgrStep, IgrStepperModule, IgrRadioModule, IgrRadioGroupModule,
-    IgrButton, IgrButtonModule, IgrSwitchModule, IgrTextarea,
+    IgrButton, IgrButtonModule, IgrSwitchModule, 
     IgrInput, IgrInputModule
 } from "igniteui-react";
 import 'igniteui-webcomponents/themes/light/bootstrap.css';
@@ -9,7 +9,6 @@ import CopyToClipboard from '../../components/CopytoClipboard/CopytoClipboard';
 import { TextField } from '@mui/material';
 import './index.css';
 import { updateUser } from '../../api/userService';
-import { error } from 'console';
 
 IgrStepperModule.register();
 IgrSwitchModule.register();
@@ -69,8 +68,8 @@ export default class Setup extends React.Component<any, any> {
                     <IgrStep key="ad-setup">
                         <span key="ad-title" slot="title">Ad Setup</span>
                         <form ref={this.AddressForm}>
-                            <IgrInput required label="Cost per Second" type="number" name="costpersecond" value={this.state.formData.costpersecond || ''} onInput={this.handleInputChange}></IgrInput>
-                            <IgrInput required label="Time Gap between 2 Ads" type="number" name="timeGap" value={this.state.formData.timeGap || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Cost per Second (in Rupees)" type="number" name="charge" value={this.state.formData.costpersecond || ''} onInput={this.handleInputChange}></IgrInput>
+                            <IgrInput required label="Time Gap between consecutive Ads (in minutes)" type="number" name="timeout" value={this.state.formData.timeGap || ''} onInput={this.handleInputChange}></IgrInput>
                             <IgrButton clicked={this.onPreviousStep}><span key="address-prev">PREVIOUS</span></IgrButton>
                             <IgrButton clicked={this.onNextStep}><span key="address-next">NEXT</span></IgrButton>
                         </form>
@@ -107,7 +106,6 @@ export default class Setup extends React.Component<any, any> {
 
     private handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
-        console.log('Name:', name, 'Value:', value);
         this.setState((prevState: any) => ({
             formData: {
                 ...prevState.formData,
@@ -119,7 +117,7 @@ export default class Setup extends React.Component<any, any> {
 
     private async handleSubmit() {
         try {
-            const missingFields = ['ifsc', 'accountNumber', 'costpersecond', 'timeGap', 'channelLink']
+            const missingFields = ['ifsc', 'accountNumber', 'charge', 'timeout', 'channelLink']
                 .filter(field => !this.state.formData[field]);
 
             if (missingFields.length > 0) {
@@ -127,16 +125,20 @@ export default class Setup extends React.Component<any, any> {
                 this.setState({ error: 'Please fill in all required fields' });
                 return;
             }
+            const updatedFormData = {
+                ...this.state.formData,
+                charge: parseInt(this.state.formData.charge, 10),
+                timeout: parseInt(this.state.formData.timeout, 10),
+            };
+            await this.setState({ formData: updatedFormData });
 
-            console.log('Form Data:', JSON.stringify(this.state.formData)); // Log after state update
-            // Proceed with the API request
             const response = await updateUser(this.state.formData);
 
             if (response.status === 200) {
                 const id = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '';
                 this.setState({
                     submitted: true,
-                    error: 'Form submitted successfully',
+                    error: 'Details submitted successfully!',
                     obsLink: `Streamers.media/${id}`,
                     paymentLink: `Streamers.media/upload/${id}`,
                 }, this.onNextStep);

@@ -1,40 +1,37 @@
 import React, { useState } from "react";
-import { TextField, InputLabel, FormControl, NativeSelect, Box, Button } from "@mui/material";
-import styles from "./Profile.module.css";
+import { TextField, Button } from "@mui/material";
+import { updateUser } from "../../api/userService";
 
 const BillingAdress: React.FC = () => {
-  const [Name, setName] = useState<string>("");
-  const [phoneNumber, setPhoneNumber] = useState<number | string>();
-  const [about, setAbout] = useState< string>("");
-  const [channelLinks, setChannelLinks] = useState<string[]>([]);
+  const [timeout, setTimeout] = useState<number>();
+  const [charge, setCharge] = useState<number >();
+  const [error, setError] = useState<string | null>(null);
 
-  const addChannelLink = () => {
-    setChannelLinks([...channelLinks, ""]);
-  };
 
-  const handleChannelLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number) => {
-      const newChannelLinks = [...channelLinks];
-      newChannelLinks[index] = e.target.value;
-      setChannelLinks(newChannelLinks);
-    };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const profileData = {
-      Name,
-      phoneNumber,
-      about,
-      channelLinks,
-    };
-    console.log(profileData);
-    // You can add further logic to handle the form submission, such as sending the data to a server
-  };
+    try {
+      const response = await updateUser({ charge, timeout });
+      if (response.status === 200) {
+        setError("Details updated successfully");
+        
+        localStorage.setItem('user', JSON.stringify(response.data.youtuber));
+          } else {
+            setError(`Error updating details`);
+          }
+
+      } catch (error) {
+        setError("Error updating details");
+      }
+    }
+
 
   return (
     <div>
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* <TextField variant="standard" required label="Cost per Second" type="number" name="cost-per-second" value={Name} onChange={(e) => setName(e.target.value)} /> */}
-      {/* <TextField variant="standard" label="Time Gap between 2 Ads" type="number" name="time" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} /> */}
+      <TextField variant="standard" required label="Cost per Second" type="number" name="charge" value={charge} onChange={(e) => setCharge(Number(e.target.value))} />
+      <TextField variant="standard" label="Time Gap between 2 Ads" type="number" name="timeout" value={timeout} onChange={(e) => setTimeout(Number(e.target.value))} />
+      <p style={{ color: error === "Details updated successfully" ? 'blue' : 'red' }}>{error}</p>
       <Button type="submit">Submit</Button>
     </form>
     </div>
