@@ -39,7 +39,8 @@ const Home: React.FC = () => {
                         Streamers enables creators to sell slots for Branded Content on their live channels.
                         Directly, and within seconds.
                     </p>
-                    <Button variant="contained" size="large" style={{ marginTop: '20px' }}>
+                    <Button variant="contained" size="large" style={{ marginTop: '20px' }}
+                        onClick={() => window.location.href = '/signup'}>
                         Become a Streamer
                     </Button>
                 </div>
@@ -73,7 +74,8 @@ const Home: React.FC = () => {
                     <p>
                     Leverage the power of the new Streamers self-service platform and reimagine how you activate audiences in Live Streaming.
                     </p>
-                    <Button variant="contained" size="large" style={{ marginTop: '20px' }}>
+                    <Button variant="contained" size="large" style={{ marginTop: '20px' }}
+                        onClick={() => window.location.href = '/signup'}>
                         SetUp a Campaign
                     </Button>
                 </div>
@@ -100,9 +102,14 @@ const Home: React.FC = () => {
                     Play around with the deal calculator to get an idea of your revenue potential.
                     </p>
                     <p>
-                    Siply enter the data in the deal calculator and get more information about how the money flows.
+                    Simply enter the data in the deal calculator and get more information about how the money flows.
                     </p>
-                    <Button variant="contained" size="large" style={{ marginTop: '20px' }}>
+                    <Button 
+                        variant="contained" 
+                        size="large" 
+                        style={{ marginTop: '20px' }} 
+                        onClick={() => window.location.href = '/signup'}
+                    >
                         SetUp a Campaign
                     </Button>
                 </div>
@@ -151,7 +158,7 @@ const Home: React.FC = () => {
                             }}
                         >
                             <div>Advertisement Charges: </div>
-                            <div><strong>{Number(duration) * Number(charge)}</strong></div>
+                            <div><strong>{(Number(duration) * Number(charge)).toFixed(2)}</strong></div>
                             <div>Streamers Earning: </div>
                             <div><strong>{(Number(duration) * Number(charge) * 0.7).toFixed(2)}</strong></div>
                         </Box>
