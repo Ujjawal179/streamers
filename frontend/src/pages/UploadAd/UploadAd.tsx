@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
     FormControl,
@@ -9,10 +9,10 @@ import {
 } from "@mui/material";
 import { uploadMedia } from "../../api/UploadMedia";
 import {useRazorpay} from 'react-razorpay';
+import { getUsernameById } from "../../api/userService";
 
 const UploadAd: React.FC = () => {
     const { userId } = useParams<{ userId: string }>(); // Extract userId from URL
-    console.log(userId);
     const storedUser = localStorage.getItem('user');
     const company = storedUser ? JSON.parse(storedUser) : null;
     const companyId= company?.user?.id// Replace with actual company ID, maybe from context or props
@@ -21,6 +21,29 @@ const UploadAd: React.FC = () => {
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false); // State to manage loading
     const {Razorpay}= useRazorpay();
+    const [username, setUsername] = useState<string | null>(null);
+    const [charge, setCharge] = useState<number | null>(null);
+    const [isUsernameLoading, setIsUsernameLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+          setIsUsernameLoading(true);
+          if (userId) {
+            const result = await getUsernameById(userId);
+            
+            if ('username' in result && 'charge' in result) {
+                setUsername(result.username ?? null);
+                setCharge(result.charge ?? null);
+                console.log(result.charge);
+            } else {
+              alert(result.message);
+            }
+          }
+          setIsUsernameLoading(false);
+        };
+    
+        fetchUsername();
+      }, [userId]);
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -50,6 +73,10 @@ const UploadAd: React.FC = () => {
 
         videoElement.onloadedmetadata = () => {
             setVideoDuration(videoElement.duration);
+            if (videoElement.duration > 30) {
+            alert("Maximum video duration is 30 seconds so the initial 30 seconds will be uploaded");
+            setVideoDuration(30);
+            }
         };
     };
 
@@ -58,7 +85,7 @@ const UploadAd: React.FC = () => {
             setIsLoading(true);  // Set loading to true when the process starts
             try {
                 if(!userId){
-                    return alert("Please provide a valid userId");
+                    return alert("Please provide a valid Streamer");
                 }
                 if (videoDuration !== null) {
                     await uploadMedia(file, userId, companyId, videoDuration,Razorpay); // Pass userId and companyId
@@ -87,92 +114,80 @@ const UploadAd: React.FC = () => {
 
     return (
         <>
-        <div style={{ minHeight: '95vh' }}>
+        {isUsernameLoading ? (
+            <Box
+            sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '95vh',
+            }}
+            >
+            <CircularProgress />
+            </Box>
+        ) : (
+            <div style={{ minHeight: '95vh' }}>
             <Box sx={{ p: { xs: 1, sm: 2, md: 3, lg: 4 } }} alignItems={'center'}>
-                <Typography variant="h4" gutterBottom>
-                    Upload Your Advertisement for Streamer: {userId}
+                <Typography variant="h5" gutterBottom>
+                Upload Your Advertisement for Streamer: {username || "Loading..."}
                 </Typography>
                 <FormControl variant="standard" fullWidth>
-                    <Box
-                        sx={{ my: { xs: 2, sm: 3, md: 4, lg: 5 },
-                            margin: "auto",
-                            textAlign: "center",
-                            width: "60%",
-                            border: "2px dashed #ccc",
-                            borderRadius: "20px",
-                            height: "250px",
-                            minWidth: "300px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            mb: 2,
-                            backgroundColor: isHovered ? "grey" : "#fff",
-                            color: isHovered ? "#fff" : "#000",
-                            transition: "background-color 0.3s ease",
-                        }}
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                    >
-                        {file ? (
-                            <div style={{ marginTop: "10px", position: 'absolute', width: '50%', textAlign: 'center' }}>
-                                <p>{isHovered ? "Drop it like it's hot!" : `Uploaded file: ${file.name}`}</p>
-                                <h3>{isHovered ? "" : `Total duration: ${videoDuration ? `${Math.round(videoDuration)} seconds` : "Loading..."}`}</h3>
-                            </div>
-                        ) : (
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                position: "absolute",
-                            }}>
-                                {isHovered ? null : <img src="/dropfile.png" alt="Drop file here" style={{ height: '150px', paddingTop: '15px' }} />}
-                                <p>{isHovered ? "Drop it like it's hot!" : "Drag and drop a file here or click to upload"}</p>
-                            </div>
-                        )}
-                        <input type="file" accept="video/*" onChange={handleFileChange} style={{ width: '100%', minHeight: "250px", minWidth: "300px", opacity: '0' }} />
-                    </Box>
+                <Box
+                    sx={{ my: { xs: 2, sm: 3, md: 4, lg: 5 },
+                    margin: "auto",
+                    textAlign: "center",
+                    width: "60%",
+                    border: "2px dashed #ccc",
+                    borderRadius: "20px",
+                    height: "250px",
+                    minWidth: "300px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    mb: 2,
+                    backgroundColor: isHovered ? "grey" : "#fff",
+                    color: isHovered ? "#fff" : "#000",
+                    transition: "background-color 0.3s ease",
+                    }}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                >
+                    {file ? (
+                    <div style={{ marginTop: "10px", position: 'absolute', width: '50%', textAlign: 'center' }}>
+                        <p>{isHovered ? "Drop it like it's hot!" : `Uploaded file: ${file.name}`}</p>
+                        <h3>{isHovered ? "" : `Duration: ${videoDuration ? `${Math.round(videoDuration)} seconds`: "Loading..."}`}</h3>
+                        <h3>{isHovered ? "" : `Charges: ₹${charge && videoDuration !== null ? (videoDuration * charge).toFixed(2) : "Loading..."} (Rate: ₹${charge}/second)`}</h3>
+                    </div>
+                    ) : (
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        position: "absolute",
+                    }}>
+                        {isHovered ? null : <img src="/dropfile.png" alt="Drop file here" style={{ height: '150px', paddingTop: '15px' }} />}
+                        <p>{isHovered ? "Drop it like it's hot!" : "Drag and drop a file here or click to upload"}</p>
+                    </div>
+                    )}
+                    <input type="file" accept="video/*" onChange={handleFileChange} style={{ width: '100%', minHeight: "250px", minWidth: "300px", opacity: '0' }} />
+                </Box>
 
-                    <Button
-                        variant="contained"
-                        onClick={handleSubmit}
-                        style={{ height: '60px', width: '50%', maxWidth: '250px', fontSize: '1.25rem', fontWeight: 'bold', margin: 'auto' }}
-                        disabled={!file || isLoading} // Disable button if loading
-                    >
-                        {isLoading ? <CircularProgress size={24} /> : "Continue"}  {/* Show loading spinner when isLoading */}
-                    </Button>
+                <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    style={{ height: '60px', width: '50%', maxWidth: '250px', fontSize: '1.25rem', fontWeight: 'bold', margin: 'auto' }}
+                    disabled={!file || isLoading} // Disable button if loading
+                >
+                    {isLoading ? <CircularProgress size={24} /> : "Continue"}  {/* Show loading spinner when isLoading */}
+                </Button>
                 </FormControl>
             </Box>
-        </div>
-        
-        {/* <div className="streamer" style={{display:"flex", flexDirection:'column', background:"#4c76da" , color:"white", borderRadius: "50% / 100px 100px 0 0", marginTop:'60px', paddingTop:'60px', paddingBottom:'60px', minHeight:'80vh'}}>
-            <h2 style={{textAlign:'center', padding:'5px'}}>Know More about streamer!!</h2>
-            <div className="about-streamer" style={{display:'flex', alignContent:'center', justifyContent:'center', flexWrap:'wrap'}}>
-                <img src="https://resource-cdn.obsbothk.com/product_system_back/product_img/gamestreamer.jpg" alt="Streamer" style={{maxWidth:'400px', borderRadius:'15px', width:'70%' , objectFit: 'cover', margin:'25px'}}/>
-                <div className="details" style={{ maxWidth: '450px', width: '60%', margin: '5px' }}>
-                    <div className="name">
-                        <h2 style={{ textAlign: 'center' }}>Streamer Name</h2>
-                    </div>
-                    <div className="desc">
-                        <p>Streamer Description: Lorem ipsum dolor sit amet consectetur adipisicing elit. Sunt commodi qui ducimus? Libero corrupti ea placeat perspiciatis sint nam. Explicabo consectetur ducimus reprehenderit ullam quidem iste sit cumque perspiciatis sequi!</p>
-                    </div>
-                    <div className="channels">
-                        <h3>Channels</h3>
-                        <div className="channel">
-                            <h4>Channel 1</h4>
-                            <p>Channel 1 description</p>
-                        </div>
-                        <div className="channel">
-                            <h4>Channel 2</h4>
-                            <p>Channel 2 description</p>
-                        </div>
-                    </div>
-                </div>
             </div>
-        </div> */}
+        )}
         </>
     );
 };

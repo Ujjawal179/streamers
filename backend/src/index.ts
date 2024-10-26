@@ -373,15 +373,32 @@ app.get('/user/:userId/videos', async (req, res) => {
   }
 });
 
+// Endpoint to get username using user ID for upload page
+app.get('/username/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Find the user by ID
+    const user = await prisma.youtuber.findUnique({
+      where: { id: userId },
+      select: { name: true, ifsc: true, accountNumber: true, channelLink: true, charge: true },
+    });
+
+    if (!user) {
+      return res.status(404);
+    }
+
+    if (!user.ifsc || !user.accountNumber || !user.channelLink || !user.charge) {
+      return res.status(400);
+    }
+
+    res.json({ username: user.name, charge: user.charge });
+  } catch (error) {
+    res.status(500);
+  }
+});
+
 
 app.listen(port, () =>{
     console.log(`Server is running at http://localhost:${port}`);
   });
-
-
-
-
-
-
-
-

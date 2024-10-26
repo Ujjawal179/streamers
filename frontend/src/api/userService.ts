@@ -29,6 +29,7 @@ interface ApiResponse {
   token?: string; // Add token property
   user?: any; // Add user property
   youtuber?: any;
+  username?: string;
 }
 
 export const registerUser = async (userData: any): Promise<ApiResponse> => {
@@ -130,22 +131,6 @@ export const updateUser = async (userData: any) => {
   }
 };
 
-// Get user by ID (optional if needed)
-export const getUserById = async (userId: string): Promise<ApiResponse> => {
-  try {
-    const response = await axios.get<ApiResponse>(`${BASE_URL}/user/${userId}`, {
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      throw error.response.data;
-    }
-    throw new Error('Server error');
-  }
-};
-
 
 // // Signup a new user
 // export const signupUser = async (userData: UserData): Promise<ApiResponse> => {
@@ -188,3 +173,29 @@ export async function fetchPaymentsForYoutuber(youtuberId: string) {
     return null;  // Handle error or show a message in the UI
   }
 }
+
+
+export const getUsernameById = async (userId: string): Promise<{ username: string; charge: any } | ApiResponse> => {
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/username/${userId}`
+    );
+
+  const user = response.data;
+  if (response.status === 404) {
+    return { success: false, message: 'Streamer not found, the link is not correct.' };
+  }
+
+  if (response.status === 400) {
+    return { success: false, message: 'Streamer details are incomplete. If you are an advertiser, please check back later. If you are a streamer, complete your setup to proceed.' };
+  }
+    return { username: user.username, charge: user.charge };
+  } catch (error) {
+    console.error('Error fetching username:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      return { success: false, message: error.response.data.message || 'Failed to fetch username' };
+    }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: errorMessage };
+  }
+};
