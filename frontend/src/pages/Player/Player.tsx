@@ -10,15 +10,8 @@ interface Video {
   uploaded_at: string;
 }
 
-interface PlayerProps {
-  type: 'image' | 'video';
-  size: number;
-  position: number;
-  media: string;
-  time: number;
-}
 
-const Player = ({ type, size, position, media, time }: PlayerProps) => {
+const Player = () => {
   const { id } = useParams<{ id: string }>();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);

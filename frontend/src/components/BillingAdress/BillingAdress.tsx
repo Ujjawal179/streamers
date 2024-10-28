@@ -11,6 +11,14 @@ const BillingAdress: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      if(!charge || !timeout) {
+        setError("Please fill all the fields");
+        return;
+      }
+      if(charge <= 10 || timeout <= 10) {
+        setError("Charge and Timeout should be greater than 10");
+        return;
+      }
       const response = await updateUser({ charge, timeout });
       if (response.status === 200) {
         setError("Details updated successfully");

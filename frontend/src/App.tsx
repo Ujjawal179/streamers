@@ -23,13 +23,7 @@ const App: React.FC = () => {
         <Route 
           path="/player/:userId" 
           element={
-            <Player 
-              type="video" 
-              size={1} 
-              position={1} 
-              media="media-url" 
-              time={120} 
-            />
+            <Player/>
           } 
         />
         <Route 

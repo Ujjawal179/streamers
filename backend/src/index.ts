@@ -245,8 +245,8 @@ app.put('/youtuber/:youtuberId/update', async (req, res) => {
     if (channelLink) updateData.channelLink = channelLink;
     if (ifsc) updateData.ifsc = ifsc;  // Assuming the IFSC and accountNumber fields exist in the database
     if (accountNumber) updateData.accountNumber = accountNumber;
-    if (timeout) updateData.timeout = timeout;
-    if (charge) updateData.charge = charge;
+    if (timeout && timeout >= 10) updateData.timeout = timeout;
+    if (charge && charge >= 10) updateData.charge = charge;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
 
     // Hash the password if it is provided
