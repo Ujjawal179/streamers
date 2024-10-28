@@ -43,11 +43,6 @@ interface SightengineError {
   message: string;
 }
 
-interface ModerationResponse {
-  result: 'approved' | 'rejected';
-  message: string;
-}
-
 export class UploadError extends Error {
   constructor(message: string, public readonly originalError?: Error) {
     super(message);
@@ -96,7 +91,7 @@ export const uploadMedia = async (
       
       // Configure Sightengine specific parameters
       data.append('models', 'nudity');  // You can add more models as needed
-      data.append('callback_url', SIGHTENGINE_CALLBACK_URL);
+      data.append('callback_url', `${SIGHTENGINE_CALLBACK_URL}/${userId}`);
       data.append('api_user', SIGHTENGINE_API_USER);
       data.append('api_secret', SIGHTENGINE_API_SECRET);
     
