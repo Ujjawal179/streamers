@@ -11,43 +11,6 @@ import cv2
 import numpy as np
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
-# import os
-# os.environ['OPENCV_CPU_DISABLE'] = 'AVX2'
-# os.environ['OPENCV_CPU_DISABLE'] = 'SSE4_1'
-# os.environ['TF_DISABLE_MKL'] = '1'  # Disable Intel MKL optimizations
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  
-# os.environ['PYTHONPATH'] = ''
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# os.environ['TF_DISABLE_MKL'] = '1'
-# os.environ['DISABLE_NUMBA_JIT'] = '1'
-# os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-# os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-# os.environ['KERAS_BACKEND'] = 'tensorflow'
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# # Very important for M1 - disable MKL
-# os.environ['TF_DISABLE_MKL'] = '1'
-# import os
-
-# # Force CPU configuration
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-# os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-# os.environ['KERAS_BACKEND'] = 'tensorflow'
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# os.environ['TF_DISABLE_MKL'] = '1'
-# os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-# os.environ['PYTHONPATH'] = ''
-
-# Import TensorFlow after setting environment variables
-# import tensorflow as tf
-
-# # Configure TensorFlow
-# tf.config.set_visible_devices([], 'GPU')
-# tf.keras.backend.clear_session()
-
-# # Verify CPU-only operation
-# physical_devices = tf.config.list_physical_devices()
-# print("Available devices:", physical_devices)
-# tf.config.set_visible_devices([], 'GPU') 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
