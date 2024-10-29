@@ -12,7 +12,7 @@ import UserRouter from "./router/userRouter";
 config();
 const port=3001
 const redisClient = createClient({
-  url: 'redis://localhost:6379' // or use Redis Cloud URL
+  url: 'redis-15241.c305.ap-south-1-1.ec2.redns.redis-cloud.com:15241' // or use Redis Cloud URL
 });
 
 // Connect to Redis
