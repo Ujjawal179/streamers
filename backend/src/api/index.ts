@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
 import {createClient} from 'redis';
-import prisma from "./db/db";
+import prisma from "../db/db";
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
 
 import {config} from 'dotenv';
-import UserRouter from "./router/userRouter";
+import UserRouter from "../router/userRouter";
 config();
 const port=3001
 const redisClient = createClient({
