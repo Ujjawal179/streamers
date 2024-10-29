@@ -141,7 +141,7 @@ export const uploadMedia = async (
     console.log('Step 1: Initiating payment...');
     const { data: paymentData } = await axios.post(`${BACKEND_API_URL}/create-payment`, {
       youtuberId: userId,
-      companyId,
+      companyId: companyId,
       amount: 1000,
       currency: 'INR'
     });
