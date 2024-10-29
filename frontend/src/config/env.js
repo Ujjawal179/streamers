@@ -1,4 +1,4 @@
-export const BACKEND_API_URL = 'http://localhost:3001'; 
+export const BACKEND_API_URL = 'https://api.streamers.media'; 
 export const CLOUDINARY_API_URL='cloudinary://213425859692937:Wsj-WrPbbDcfeR23d4750kxKZRo@dzfctqaez'
 export const CLOUDINARY_API_KEY='213425859692937'
 export const CLOUDINARY_CLOUD_NAME='dfuh0xdnd'
