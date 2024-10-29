@@ -23,11 +23,13 @@ redisClient.connect().catch(console.error);
 const app = express();
 app.use(express.json());
 const corsOptions = {
-  origin: 'https://streamers.media', // Allow specific origin
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Allowed methods
-  credentials: true, // Allow cookies if needed
-  allowedHeaders: ['Content-Type', 'Authorization'], // Adjust headers as needed
+  origin: 'https://streamers.media',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
 };
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight
 // Define a route to handle GET requests at the root path ("/")
 app.get("/", (req, res) => {
   // Send a JSON response with the message "Hello, World!"
