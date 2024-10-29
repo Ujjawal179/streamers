@@ -141,7 +141,7 @@ export const uploadMedia = async (
     console.log({
       youtuberId: userId,
       companyId: companyId,
-      amount: 1000,
+      amount: 100,
       currency: 'INR'
     });
     console.log('Step 1: Initiating payment...');
