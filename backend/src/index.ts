@@ -125,7 +125,7 @@ app.post('/verify-payment', async (req, res) => {
 
       // Manually process payout to YouTuber's bank account using Razorpay Payout API
       const payoutOptions = {
-        account_number: 'NZL4E084wCuKAX', // Your Razorpay account number
+        key: process.env.RAZORPAY_KEY_ID, // Your Razorpay account number
         amount: youtuberShare * 100, // Amount in paise (70% of the total)
         currency: 'INR',
         purpose: 'payout',
