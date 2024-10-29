@@ -11,7 +11,7 @@
       "src": "/(.*)",
       "dest": "dist/index.js",
       "headers": {
-        "Access-Control-Allow-Origin": "https://api.streamers.media",
+        "Access-Control-Allow-Origin": "https://streamers.media",
         "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
         "Access-Control-Allow-Credentials": "true"
       }
