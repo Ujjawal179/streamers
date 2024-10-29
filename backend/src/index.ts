@@ -22,7 +22,12 @@ redisClient.connect().catch(console.error);
 // Create a new express application
 const app = express();
 app.use(express.json());
-app.use(cors());
+const corsOptions = {
+  origin: 'https://streamers.media', // Allow specific origin
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Allowed methods
+  credentials: true, // Allow cookies if needed
+  allowedHeaders: ['Content-Type', 'Authorization'], // Adjust headers as needed
+};
 // Define a route to handle GET requests at the root path ("/")
 app.get("/", (req, res) => {
   // Send a JSON response with the message "Hello, World!"
