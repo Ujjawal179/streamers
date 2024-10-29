@@ -13,9 +13,8 @@ import { getUsernameById } from "../../api/userService";
 
 const UploadAd: React.FC = () => {
     const { userId } = useParams<{ userId: string }>(); // Extract userId from URL
-    const storedUser = localStorage.getItem('user');
-    const company = storedUser ? JSON.parse(storedUser) : null;
-    const companyId= company?.user?.id// Replace with actual company ID, maybe from context or props
+    const companyId= localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '';
+    console.log(companyId);
     const [file, setFile] = useState<File | null>(null);
     const [isHovered, setIsHovered] = useState<boolean>(false);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
@@ -37,6 +36,7 @@ const UploadAd: React.FC = () => {
                 console.log(result.charge);
             } else {
               alert(result.message);
+              window.location.href = "/"; // Redirect to home page if user not found
             }
           }
           setIsUsernameLoading(false);
