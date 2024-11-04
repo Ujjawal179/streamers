@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
@@ -10,48 +9,41 @@ interface Video {
   uploaded_at: string;
 }
 
-
 const Player = () => {
-  const { id } = useParams<{ id: string }>();
-  const [videos, setVideos] = useState<Video[]>([]);
+  const { userId } = useParams<{ userId: string }>();
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [queueCompleted, setQueueCompleted] = useState(false);
 
-  const fetchVideos = async () => {
+  const fetchNextVideo = async () => {
     try {
       setIsLoading(true);
-      setQueueCompleted(false);
-      const response = await axios.get<{ videos: Video[] }>(`http://localhost:3001/user/${id}/videos`);
-      const fetchedVideos = response.data.videos;
-      
-      if (fetchedVideos.length > 0) {
-        setVideos(fetchedVideos.slice(1)); // Store remaining videos
-        setCurrentVideo(fetchedVideos[0]); // Set first video as current
+      const response = await axios.get<{ video: Video | null }>(`http://localhost:3001/user/${userId}/videos`);
+      const fetchedVideo = response.data.video;
+
+      if (fetchedVideo) {
+        setCurrentVideo(fetchedVideo);
+        setQueueCompleted(false);
       } else {
         setQueueCompleted(true);
+        setCurrentVideo(null);
       }
-      
+
       setIsLoading(false);
     } catch (error) {
-      console.error('Error fetching videos:', error);
+      console.error('Error fetching video:', error);
       setIsLoading(false);
       setQueueCompleted(true);
+      setCurrentVideo(null);
     }
   };
 
   useEffect(() => {
-    fetchVideos();
-  }, [id]);
+    fetchNextVideo();
+  }, [userId]);
 
   const handleVideoEnded = () => {
-    if (videos.length > 0) {
-      setCurrentVideo(videos[0]); // Get the next video
-      setVideos(videos.slice(1)); // Remove the used video from the queue
-    } else {
-      setCurrentVideo(null);
-      setQueueCompleted(true);
-    }
+    fetchNextVideo(); // Fetch the next video when the current one ends
   };
 
   const containerStyle: React.CSSProperties = {
@@ -61,7 +53,6 @@ const Player = () => {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    // backgroundColor: '#000',
   };
 
   const videoContainerStyle: React.CSSProperties = {
@@ -121,7 +112,7 @@ const Player = () => {
           }}
           autoPlay
           controls
-          onEnded={handleVideoEnded}
+          onEnded={handleVideoEnded} // Triggered when the video ends
         >
           <source src={currentVideo.url} type="video/mp4" />
           Your browser does not support the video tag.

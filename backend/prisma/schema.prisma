@@ -8,26 +8,65 @@ datasource db {
 }
 
 model Youtuber {
-  id          String @id @default(uuid())
-  name        String?
-  email       String  @unique
-  password    String
-  ifsc        String?
+  id            String     @id @default(uuid())
+  name          String?
+  email         String     @unique
+  password      String
+  ifsc          String?
   accountNumber String?
-  channelLink String?
-  phoneNumber String?
-  timeout     Int?
-  charge      Int?
-  payment Payment[]
+  channelLink   String?
+  phoneNumber   String?
+  timeout       Int?      @default(15) // Default 15 seconds between messages
+  charge        Int?      @default(100) // Default charge in INR
+  payment       Payment[]
+  campaigns     Campaign[]
+  donations     Donation[]
+  isLive        Boolean    @default(false)
+  alertBoxUrl   String?    // OBS browser source URL
+  createdAt     DateTime   @default(now())
 }
 
 model Company {
-  id          String @id @default(uuid())
+  id          String     @id @default(uuid())
   name        String
   description String?
-  email       String  @unique
+  email       String     @unique
   password    String
-  payment Payment[]
+  payment     Payment[]
+  donations   Donation[]
+  campaigns   Campaign[]
+  createdAt   DateTime   @default(now())
+}
+
+model Campaign {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  budget      Int
+  targetViews Int
+  status      String     @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  youtubers   Youtuber[]
+  donations   Donation[]
+  createdAt   DateTime   @default(now())
+ 
+}
+
+model Donation {
+  id          String   @id @default(uuid())
+  amount      Int
+  message     String?
+  videoUrl    String?
+  status      String   @default("PENDING") // PENDING, PLAYED, FAILED
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  youtuberId  String
+  youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Payment {

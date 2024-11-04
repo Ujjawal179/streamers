@@ -1,10 +1,10 @@
-export const BACKEND_API_URL = 'https://api.streamers.media'; 
+export const BACKEND_API_URL = 'http://localhost:3001'; // Your backend URL
 export const CLOUDINARY_API_URL='cloudinary://213425859692937:Wsj-WrPbbDcfeR23d4750kxKZRo@dzfctqaez'
 export const CLOUDINARY_API_KEY='213425859692937'
 export const CLOUDINARY_CLOUD_NAME='dfuh0xdnd'
 export const CLOUDINARY_API_SECRET='Wsj-WrPbbDcfeR23d4750kxKZRo'
 export const RAZORPAY_KEY_SECRET='nh1AHyj2qqtRfKyjcq6YfdLv'
 export const RAZORPAY_KEY_ID='rzp_test_LiypH1aQXCdxod'
-export const SIGHTENGINE_CALLBACK_URL='https://streamers.media/upload'
+export const SIGHTENGINE_CALLBACK_URL='http://localhost:3000/upload'
 export const SIGHTENGINE_API_USER='1209847355'
 export const SIGHTENGINE_API_SECRET='GhhbpNhbjnRNLdCzn3gHYZMXRA69ju4b'

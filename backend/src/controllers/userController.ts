@@ -1,12 +1,12 @@
-import express, { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import prisma from '../db/db'; // assuming you have prismaClient set up
+import prisma from '../db/db';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 
-const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
-// Define the Zod schema for input validation
+// Input validation schemas
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
@@ -20,137 +20,156 @@ const loginSchema = z.object({
   userType: z.enum(['company', 'youtuber']),
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
-
-
-// Register route
- export const register= async (req: Request, res: Response): Promise<Response> => {
-  // Parse and validate the request body using Zod
-  const parseResult = registerSchema.safeParse(req.body);
-
-  // Handle validation errors
-  if (!parseResult.success) {
-    const errors = parseResult.error.issues.map((issue) => ({
-      path: issue.path[0],
-      message: issue.message,
-    }));
-    return res.status(400).json({ errors });
-  }
-
-  const { name, email, password,userType } = parseResult.data;
-
+export const register = async (req: Request, res: Response) => {
   try {
+    const parseResult = registerSchema.safeParse(req.body);
 
-    if(userType === 'company'){
-      // Check if the user already exists
-      const existingUser = await prisma.company.findUnique({
-        where: {
-          email,
-        },
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        errors: parseResult.error.issues.map(issue => ({
+          path: issue.path[0],
+          message: issue.message,
+        }))
       });
-
-      if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
-      }
-
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create a new user
-      const newUser = await prisma.company.create({
-        data: {
-          name,
-          email,
-          password: hashedPassword,
-        },
-      });
-
-      return res.status(201).json({ message: 'User registration successful', user: newUser, userType:"company" });
     }
 
-    // Check if the user already exists
-    const existingUser = await prisma.youtuber.findUnique({
-      where: {
-        email,
-      },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Hash the password
+    const { name, email, password, userType } = parseResult.data;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new user
-    const newUser = await prisma.youtuber.create({
+    if (userType === 'company') {
+      const existingCompany = await prisma.company.findUnique({ where: { email } });
+      if (existingCompany) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already registered'
+        });
+      }
+
+      const company = await prisma.company.create({
+        data: { name, email, password: hashedPassword }
+      });
+
+      const token = jwt.sign(
+        { id: company.id, userType },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      return res.status(201).json({
+        success: true,
+        user: { ...company, password: undefined },
+        userType,
+        token
+      });
+    }
+
+    const existingYoutuber = await prisma.youtuber.findUnique({ where: { email } });
+    if (existingYoutuber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+
+    const youtuber = await prisma.youtuber.create({
       data: {
         name,
         email,
         password: hashedPassword,
-      },
+        alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`
+      }
     });
-    console.log(newUser);
-    return res.status(201).json({ message: 'User registration successful', user: newUser ,userType:'youtuber'});
+
+    const token = jwt.sign(
+      { id: youtuber.id, userType },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      user: { ...youtuber, password: undefined },
+      userType,
+      token
+    });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Registration error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
-}
+};
 
-export const login=async (req: Request, res: Response): Promise<Response> => {
-  // Parse and validate the request body
-  const parseResult = loginSchema.safeParse(req.body);
-
-  if (!parseResult.success) {
-    const errors = parseResult.error.issues.map((issue) => ({
-      path: issue.path[0],
-      message: issue.message,
-    }));
-    return res.status(400).json({ errors });
-  }
-
-  const { email, password,userType } = parseResult.data;
-
+export const login = async (req: Request, res: Response) => {
   try {
-    if(userType === 'company'){
-      // Check if user exists
-      const user = await prisma.company.findUnique({
-        where: { email },
+    const parseResult = loginSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        errors: parseResult.error.issues.map(issue => ({
+          path: issue.path[0],
+          message: issue.message,
+        }))
       });
-
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid email or password' });
-      }
-
-      // Compare passwords
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid email or password' });
-      }
-
-      return res.status(200).json({ message: 'Login successful', user: user,userType:'company'});
     }
-    // Check if user exists
-    const user = await prisma.youtuber.findUnique({
-      where: { email },
+
+    const { email, password, userType } = parseResult.data;
+
+    if (userType === 'company') {
+      const company = await prisma.company.findUnique({ where: { email } });
+      
+      if (!company || !await bcrypt.compare(password, company.password)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      const token = jwt.sign(
+        { id: company.id, userType },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        user: { ...company, password: undefined },
+        userType,
+        token
+      });
+    }
+
+    const youtuber = await prisma.youtuber.findUnique({ where: { email } });
+    
+    if (!youtuber || !await bcrypt.compare(password, youtuber.password)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const token = jwt.sign(
+      { id: youtuber.id, userType },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      user: { ...youtuber, password: undefined },
+      userType,
+      token
     });
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-   
-
-    return res.status(200).json({ message: 'Login successful', user: user,userType:'youtuber' });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
-}
+};
