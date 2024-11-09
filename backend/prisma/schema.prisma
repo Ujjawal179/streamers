@@ -81,4 +81,5 @@ model Payment {
   company     Company  @relation(fields: [companyId], references: [id])
   youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
   createdAt   DateTime @default(now())
+  playsNeeded Int      @default(1)  // Add this instead of metadata
 }

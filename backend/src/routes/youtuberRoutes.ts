@@ -1,12 +1,19 @@
 import { Router } from 'express';
-import { YoutuberController } from '../controllers/youtuberController';
-import { authenticateToken } from '../middleware/auth';
-
+import { auth } from '../middleware/auth';
 const router = Router();
 
-router.get('/:youtuberId', authenticateToken, YoutuberController.getYoutuber);
-router.put('/:youtuberId/update', authenticateToken, YoutuberController.updateYoutuber);
-router.get('/:youtuberId/payments', authenticateToken, YoutuberController.getPayments);
-router.post('/:youtuberId/payout-details', authenticateToken, YoutuberController.updatePayoutDetails);
+import { 
+  updateYoutuber,
+  getUsername,
+  getYoutuberDetails,
+  updateSettings,
+  getYoutuberCampaigns
+} from '../controllers/youtuberController';
+
+router.put('/:id', auth, updateYoutuber);
+router.get('/:id/username', getUsername);
+router.get('/:id', getYoutuberDetails);
+router.put('/:id/settings', auth, updateSettings);
+router.get('/:id/campaigns', auth, getYoutuberCampaigns);
 
 export default router;

@@ -14,6 +14,7 @@ import campaignRoutes from './routes/campaignRoutes';
 import companyRoutes from './routes/companyRoutes';
 import youtuberRoutes from './routes/youtuberRoutes';
 import userRoutes from './routes/userRoutes';
+import MediaRouter from "./routes/mediaRoutes"; // Import media routes
 
 config();
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/v1/campaigns', campaignRoutes);
 app.use('/api/v1/companies', companyRoutes);
 app.use('/api/v1/youtubers', youtuberRoutes);
 app.use('/api/v1', userRoutes);
+app.use('/api/v1/media', MediaRouter); // Use media routes
 
 const port = process.env.PORT || 3001;
 server.listen(port, () => {

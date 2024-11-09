@@ -1,20 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-interface AuthenticatedRequest extends Request {
-  user?: any;
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
-export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+export const auth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
-  const secret = process.env.JWT_SECRET;
-  if (!secret) return res.sendStatus(500);
+    if (!token) {
+      throw new Error();
+    }
 
-  jwt.verify(token, secret, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
-  });
+  } catch (error) {
+    res.status(401).send({ error: 'Please authenticate.' });
+  }
 };

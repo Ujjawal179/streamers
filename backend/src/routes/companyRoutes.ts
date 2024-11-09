@@ -1,10 +1,13 @@
 import { Router } from 'express';
-import { CompanyController } from '../controllers/companyController';
-import { authenticateToken } from '../middleware/auth';
-
+import { auth } from '../middleware/auth';
 const router = Router();
 
-router.post('/upload', authenticateToken, CompanyController.uploadVideo);
-router.get('/youtubers', authenticateToken, CompanyController.getYoutubers);
+import { CompanyController } from '../controllers/companyController';
+
+router.post('/campaigns', auth, CompanyController.createCampaign);
+router.get('/:id/campaigns', auth, CompanyController.getCompanyCampaigns);
+router.put('/campaigns/:id', auth, CompanyController.updateCampaign);
+router.post('/videos', auth, CompanyController.uploadVideo);
+router.get('/youtubers', auth, CompanyController.getYoutubers);
 
 export default router;

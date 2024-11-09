@@ -47,4 +47,14 @@ export class DonationService {
       }
     });
   }
+
+  static async getYoutuberDonations(youtuberId: string) {
+    return prisma.donation.findMany({
+      where: { youtuberId },
+      include: {
+        company: true,
+        campaign: true
+      }
+    });
+  }
 }

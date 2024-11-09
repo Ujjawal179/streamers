@@ -1,72 +1,83 @@
 import { Request, Response } from 'express';
-import { YoutuberService } from '../services/youtuberService';
-import { PaymentService } from '../services/paymentService';
-import bcrypt from 'bcrypt';
+import prisma from '../db/db';
 
-export class YoutuberController {
-    static async getYoutuber(req: Request, res: Response) {
-        const { youtuberId } = req.params;
+export const updateYoutuber = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const youtuber = await prisma.youtuber.update({
+      where: { id },
+      data: req.body
+    });
+    res.json(youtuber);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update youtuber' });
+  }
+};
 
-        try {
-            const youtuber = await YoutuberService.getYoutuberById(youtuberId);
+export const getUsername = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const youtuber = await prisma.youtuber.findUnique({
+      where: { id },
+      select: { name: true, charge: true }
+    });
+    if (!youtuber) return res.status(404).json({ error: 'Youtuber not found' });
+    res.json({ username: youtuber.name, charge: youtuber.charge });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch username' });
+  }
+};
 
-            if (!youtuber) {
-                return res.status(404).json({ message: 'YouTuber not found' });
-            }
+export const getYoutuberDetails = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const youtuber = await prisma.youtuber.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        channelLink: true,
+        phoneNumber: true,
+        timeout: true,
+        charge: true,
+        isLive: true,
+        alertBoxUrl: true
+      }
+    });
+    if (!youtuber) return res.status(404).json({ error: 'Youtuber not found' });
+    res.json(youtuber);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch youtuber details' });
+  }
+};
 
-            res.json(youtuber);
-        } catch (error) {
-            res.status(500).json({ message: 'Error fetching YouTuber details' });
+export const updateSettings = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { timeout, charge } = req.body;
+    const youtuber = await prisma.youtuber.update({
+      where: { id },
+      data: { timeout, charge }
+    });
+    res.json(youtuber);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+};
+
+export const getYoutuberCampaigns = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const campaigns = await prisma.campaign.findMany({
+      where: {
+        youtubers: {
+          some: { id }
         }
-    }
-
-    static async updateYoutuber(req: Request, res: Response) {
-        const { youtuberId } = req.params;
-        const { name, password, channelLink, email, ifsc, accountNumber, timeout, charge, phoneNumber } = req.body;
-
-        try {
-            const updateData: any = {};
-            if (name) updateData.name = name;
-            if (channelLink) updateData.channelLink = channelLink;
-            if (ifsc) updateData.ifsc = ifsc;
-            if (accountNumber) updateData.accountNumber = accountNumber;
-            if (timeout && timeout >= 10) updateData.timeout = timeout;
-            if (charge && charge >= 10) updateData.charge = charge;
-            if (phoneNumber) updateData.phoneNumber = phoneNumber;
-
-            if (password) {
-                updateData.password = await bcrypt.hash(password, 10);
-            }
-
-            const updatedYoutuber = await YoutuberService.updateYoutuber(youtuberId, updateData);
-
-            res.json({ message: "Updated successfully", youtuber: updatedYoutuber });
-        } catch (error) {
-            res.status(500).json({ message: "Error updating YouTuber" });
-        }
-    }
-
-    static async getPayments(req: Request, res: Response) {
-        const { youtuberId } = req.params;
-
-        try {
-            const payments = await PaymentService.getPaymentsByYoutuber(youtuberId);
-            res.json(payments);
-        } catch (error) {
-            res.status(500).json({ message: 'Error fetching payments' });
-        }
-    }
-
-    static async updatePayoutDetails(req: Request, res: Response) {
-        const { youtuberId } = req.params;
-        const { ifsc, accountNumber } = req.body;
-
-        try {
-            const updatedYoutuber = await YoutuberService.updatePayoutDetails(youtuberId, ifsc, accountNumber);
-
-            res.json({ message: "Payout details updated", youtuber: updatedYoutuber });
-        } catch (error) {
-            res.status(500).json({ message: "Error updating payout details" });
-        }
-    }
-}
+      }
+    });
+    res.json(campaigns);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch campaigns' });
+  }
+};

@@ -1,6 +1,5 @@
 import axios from 'axios';
-import { BACKEND_API_URL } from '../config/env';
-const BASE_URL: string = BACKEND_API_URL;
+import { API_ROUTES } from '../routes/routes';
 
 interface LoginData {
   email: string;
@@ -21,7 +20,7 @@ interface ApiResponse {
 
 export const registerUser = async (userData: any): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/api/v1/register`, {
+    const response = await fetch(API_ROUTES.AUTH.REGISTER, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,7 +51,7 @@ export const registerUser = async (userData: any): Promise<ApiResponse> => {
 
 export const loginUser = async (loginData: LoginData): Promise<ApiResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/api/v1/login`, {
+    const response = await fetch(API_ROUTES.AUTH.LOGIN, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -85,7 +84,7 @@ export const logoutUser = () => {
 export const updateUser = async (userData: any) => {
   try {
     const id = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '';
-    const response = await axios.put<ApiResponse>(`${BASE_URL}/youtuber/${id}/update`, userData);
+    const response = await axios.put<ApiResponse>(API_ROUTES.YOUTUBER.UPDATE(id), userData);
     return response;
   } catch (error) {
     console.error('Error updating user:', error);
@@ -96,9 +95,9 @@ export const updateUser = async (userData: any) => {
   }
 };
 
-export async function fetchPaymentsForYoutuber(youtuberId: string) {
+export const fetchPaymentsForYoutuber = async (youtuberId: string) => {
   try {
-    const response = await fetch(`${BASE_URL}/youtuber/${youtuberId}/payments`, {
+    const response = await fetch(API_ROUTES.PAYMENT.GET_YOUTUBER_PAYMENTS(youtuberId), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -119,11 +118,11 @@ export async function fetchPaymentsForYoutuber(youtuberId: string) {
     console.error('Error fetching payments:', error);
     return null;
   }
-}
+};
 
 export const getUsernameById = async (userId: string): Promise<{ username: string; charge: any } | ApiResponse> => {
   try {
-    const response = await axios.get(`${BASE_URL}/username/${userId}`);
+    const response = await axios.get(API_ROUTES.YOUTUBER.GET_USERNAME(userId));
 
     const user = response.data;
     if (response.status === 404) {

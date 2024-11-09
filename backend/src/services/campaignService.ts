@@ -70,4 +70,20 @@ export class CampaignService {
       remainingBudget: campaign.budget - campaign.donations.reduce((sum, d) => sum + d.amount, 0)
     };
   }
+
+  static async deleteCampaign(id: string) {
+    return prisma.campaign.delete({
+      where: { id }
+    });
+  }
+
+  static async getAllCampaigns() {
+    return prisma.campaign.findMany({
+      include: {
+        youtubers: true,
+        donations: true,
+        company: true
+      }
+    });
+  }
 }

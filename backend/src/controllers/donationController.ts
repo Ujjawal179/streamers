@@ -74,4 +74,41 @@ export class DonationController {
             });
         }
     }
+
+    static async updateDonationStatus(req: Request, res: Response) {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        try {
+            if (!id || !status) {
+                return res.status(400).json({
+                    message: 'Missing required fields: id or status'
+                });
+            }
+
+            const updatedDonation = await DonationService.updateDonationStatus(id, status);
+            res.json(updatedDonation);
+        } catch (error: any) {
+            console.error('Error updating donation status:', error);
+            res.status(500).json({
+                message: 'Failed to update donation status',
+                error: error.message
+            });
+        }
+    }
+
+    static async getYoutuberDonations(req: Request, res: Response) {
+        const { youtuberId } = req.params;
+
+        try {
+            const donations = await DonationService.getYoutuberDonations(youtuberId);
+            res.json(donations);
+        } catch (error: any) {
+            console.error('Error fetching youtuber donations:', error);
+            res.status(500).json({
+                message: 'Failed to fetch youtuber donations',
+                error: error.message
+            });
+        }
+    }
 }
