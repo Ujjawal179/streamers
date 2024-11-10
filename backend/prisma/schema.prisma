@@ -13,8 +13,10 @@ model Youtuber {
   email         String     @unique
   password      String
   ifsc          String?
+  accountName   String?
   accountNumber String?
   channelLink   String?
+  bankDetails   String?
   phoneNumber   String?
   timeout       Int?      @default(15) // Default 15 seconds between messages
   charge        Int?      @default(100) // Default charge in INR
