@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../db/db';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
