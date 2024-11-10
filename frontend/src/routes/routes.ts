@@ -22,6 +22,7 @@ export const API_ROUTES = {
     UPLOAD_DIRECT: (youtuberId: string) => `${BASE_URL}/media/direct/${youtuberId}`,
     GET_NEXT_VIDEO: (youtuberId: string) => `${BASE_URL}/media/queue/${youtuberId}/next`,
     GET_VIDEO: (youtuberId: string) => `${BASE_URL}/media/video/${youtuberId}`,
+    GET_SIGNATURE: `${BASE_URL}/media/get-signature`,
   },
   CAMPAIGN: {
     GET_ALL: `${BASE_URL}/campaigns`,

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth';
 import { CompanyController } from '../controllers/companyController';
+import { getCloudinarySignature } from '../controllers/userController';
 
 const router = Router();
 
@@ -12,5 +13,8 @@ router.post('/direct/:youtuberId', auth, CompanyController.uploadVideoDirectToYo
 router.get('/queue/:youtuberId/next', auth, CompanyController.getNextVideoInQueue);
 // Get video by ID
 router.get('/video/:youtuberId', auth, CompanyController.getVideo);
+
+// Generate signature for Cloudinary upload
+router.get('/get-signature', getCloudinarySignature);
 
 export default router;

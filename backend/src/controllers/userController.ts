@@ -4,6 +4,7 @@ import prisma from '../db/db';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { generateCloudinarySignature } from '../helpers/helper';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
@@ -172,5 +173,27 @@ export const login = async (req: Request, res: Response) => {
       success: false,
       message: 'Internal server error'
     });
+  }
+};
+export const getCloudinarySignature = (req: Request, res: Response) => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = 'uploads';
+    const uploadPreset = 'ml_default'; // Include the upload preset
+    
+    // Include all parameters that need to be signed
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}&upload_preset=${uploadPreset}`;
+    const signature = generateCloudinarySignature(paramsToSign);
+    res.json({
+      signature,
+      timestamp,
+      folder,
+      uploadPreset,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    });
+  } catch (error) {
+    console.error('Error generating signature:', error);
+    res.status(500).json({ error: 'Failed to generate signature' });
   }
 };
