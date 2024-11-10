@@ -83,3 +83,7 @@ model Payment {
   createdAt   DateTime @default(now())
   playsNeeded Int      @default(1)  // Add this instead of metadata
 }
+enum Role{
+  Youtuber
+  Company
+}

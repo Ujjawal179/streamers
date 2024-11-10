@@ -12,7 +12,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded as { id: string, userType: string };
     next();
   } catch (error) {
     res.status(401).send({ error: 'Please authenticate.' });
