@@ -15,6 +15,6 @@ router.get('/queue/:youtuberId/next', auth, CompanyController.getNextVideoInQueu
 router.get('/video/:youtuberId', auth, CompanyController.getVideo);
 
 // Generate signature for Cloudinary upload
-router.get('/get-signature', getCloudinarySignature);
+router.get('/get-signature',auth, getCloudinarySignature);
 
 export default router;
