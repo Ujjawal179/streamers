@@ -13,6 +13,15 @@ export const createPaymentOrder = async (req: Request, res: Response) => {
   const { companyId, youtuberId, amount, currency = 'INR', playsNeeded = 1 } = req.body;
 
   try {
+    // Validate Company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    });
+
+    if (!company) {
+      return res.status(400).json({ message: 'Company not found' });
+    }
+
     // Validate YouTuber exists and is live
     const youtuber = await prisma.youtuber.findUnique({
       where: { id: youtuberId }

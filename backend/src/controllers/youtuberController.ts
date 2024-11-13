@@ -19,10 +19,10 @@ export const getUsername = async (req: Request, res: Response) => {
     const { id } = req.params;
     const youtuber = await prisma.youtuber.findUnique({
       where: { id },
-      select: { name: true, charge: true }
+      select: { name: true, charge: true, isLive: true, timeout: true }
     });
     if (!youtuber) return res.status(404).json({ error: 'Youtuber not found' });
-    res.json({ username: youtuber.name, charge: youtuber.charge });
+    res.json({ username: youtuber.name, charge: youtuber.charge, isLive: youtuber.isLive, timeout: youtuber.timeout });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch username' });
   }
