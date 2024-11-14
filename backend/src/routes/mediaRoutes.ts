@@ -13,7 +13,7 @@ router.post('/direct/:youtuberId', auth, CompanyController.uploadVideoDirectToYo
 router.get('/queue/:youtuberId/next', auth, CompanyController.getNextVideoInQueue);
 // Get video by ID
 
-router.get('/video/:youtuberId/:pin', auth, CompanyController.getVideo);
+router.get('/video/:youtuberId/:pin', CompanyController.getVideo);
 
 // Generate signature for Cloudinary upload
 router.get('/get-signature',auth, getCloudinarySignature);
