@@ -73,6 +73,8 @@ export const register = async (req: Request, res: Response) => {
         message: 'Email already registered'
       });
     }
+    const magicNumbr= generateUniqueCode();
+    console.log(magicNumbr);
 
     const youtuber = await prisma.youtuber.create({
       data: {
