@@ -6,9 +6,15 @@ let redisClient: RedisClientType;
 
 export const setupRedis = async () => {
   if (!redisClient) {
-    redisClient = createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379'
-    });
+    
+
+const redisClient = createClient({
+    password: 'MbdvwKcaqGbBgMSlG3JvLfEhG4xrczhJ',
+    socket: {
+        host: 'redis-15241.c305.ap-south-1-1.ec2.redns.redis-cloud.com',
+        port: 15241
+    }
+});
 
     redisClient.on('error', (err) => {
       console.error('Redis Client Error', err);

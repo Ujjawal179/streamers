@@ -1,14 +1,11 @@
-import { createClient } from 'redis';
+
 import prisma from '../db/db';
 import { YoutuberService } from './youtuberService';
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
 
-redisClient.connect().catch(console.error);
 
 export class CompanyService {
+
   static async uploadVideoToYoutubers(youtuberIds: string[], videoData: { url: string, public_id?: string, resource_type?: string, time?: string }) {
     const videoPromises = youtuberIds.map(async (youtuberId) => {
       const key = `youtuber:${youtuberId}:videos`;
