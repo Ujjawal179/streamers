@@ -18,6 +18,7 @@ model Youtuber {
   channelLink   String?
   bankDetails   String?
   phoneNumber   String?
+  MagicNumber   Int?
   timeout       Int?      @default(15) // Default 15 seconds between messages
   charge        Int?      @default(100) // Default charge in INR
   payment       Payment[]

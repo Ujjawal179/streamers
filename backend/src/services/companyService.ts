@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import prisma from '../db/db';
+import { YoutuberService } from './youtuberService';
 
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
@@ -28,8 +29,15 @@ export class CompanyService {
     return videoData;
   }
 
-  static async getVideo(youtuberId: string) {
+  static async getVideo(youtuberId: string,pin: string) {
     const key = `youtuber:${youtuberId}:videos`;
+    const youtuber = await YoutuberService.getYoutuberById(youtuberId);
+    if (!youtuber) {
+      throw new Error('Youtuber not found');
+    }
+    if(youtuber.MagicNumber !== Number(pin)){
+      throw new Error('Url is not correct');
+    }
     const video = await redisClient.lPop(key);
     return video ? JSON.parse(video) : null;
   }

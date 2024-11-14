@@ -13,3 +13,5 @@ export const generateCloudinarySignature = (paramsToSign: string): string => {
       .update(paramsToSign + process.env.CLOUDINARY_API_SECRET)
       .digest('hex');
   };
+
+export const generateUniqueCode = () => Math.floor(1000 + Math.random() * 9000);  

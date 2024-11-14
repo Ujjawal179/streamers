@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
 import prisma from '../db/db';
+import { YoutuberService } from '../services/youtuberService';
 
 export class CompanyController {
   static async uploadVideoCampaign(req: Request, res: Response) {
@@ -223,10 +224,10 @@ export class CompanyController {
   }
 
   static async getVideo(req: Request, res: Response) {
-    const { youtuberId } = req.params;
+    const { youtuberId,pin } = req.params;
 
     try {
-      const video = await CompanyService.getVideo(youtuberId);
+      const video = await CompanyService.getVideo(youtuberId,pin);
       if (video) {
         res.json(video);
       } else {

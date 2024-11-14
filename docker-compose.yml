@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend # Path to the frontend Dockerfile directory
+    ports:
+      - "3000:3000"  # Map frontend service to localhost:3000
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend # Path to the backend Dockerfile directory
+    ports:
+      - "3001:3001"  # Map backend service to localhost:5000
+    env_file:
+      - ./backend/.env  # Path to the backend .env file
+    depends_on:
+      - redis
+      - db
+    networks:
+      - app-network
+
+  redis:
+    image: "redis:alpine"  # Use official Redis image
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  db:
+    image: postgres:13-alpine  # Use official PostgreSQL image
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

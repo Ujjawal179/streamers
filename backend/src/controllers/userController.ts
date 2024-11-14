@@ -4,7 +4,7 @@ import prisma from '../db/db';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { generateCloudinarySignature } from '../helpers/helper';
+import { generateCloudinarySignature, generateUniqueCode } from '../helpers/helper';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
@@ -79,7 +79,8 @@ export const register = async (req: Request, res: Response) => {
         name,
         email,
         password: hashedPassword,
-        alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`
+        alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`,
+        MagicNumber:generateUniqueCode()
       }
     });
 
