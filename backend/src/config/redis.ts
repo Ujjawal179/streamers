@@ -1,20 +1,19 @@
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
+import { config } from 'dotenv';
 
-import { RedisClientType } from 'redis';
+config(); // Load environment variables from .env file
 
 let redisClient: RedisClientType;
 
 export const setupRedis = async () => {
   if (!redisClient) {
-    
-
-const redisClient = createClient({
-    password: 'MbdvwKcaqGbBgMSlG3JvLfEhG4xrczhJ',
-    socket: {
-        host: 'redis-15241.c305.ap-south-1-1.ec2.redns.redis-cloud.com',
-        port: 15241
-    }
-});
+    redisClient = createClient({
+      password: process.env.REDIS_PASSWORD,
+      socket: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT)
+      }
+    });
 
     redisClient.on('error', (err) => {
       console.error('Redis Client Error', err);
@@ -48,7 +47,13 @@ export const getNextFromQueue = async (key: string) => {
 
 export const removeFromQueue = async (key: string) => {
   const client = getRedisClient();
-  await client.lPop(key);
+  const video =await client.lPop(key);
+  return video;
+};
+
+export const getQueueLength = async (key: string) => {
+  const client = getRedisClient();
+  return await client.lLen(key);
 };
 
 export default getRedisClient;

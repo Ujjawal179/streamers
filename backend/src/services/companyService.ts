@@ -1,16 +1,13 @@
-
 import prisma from '../db/db';
 import { YoutuberService } from './youtuberService';
-
-
+import { addToQueue, getNextFromQueue, removeFromQueue, getQueueLength } from '../config/redis';
 
 export class CompanyService {
 
   static async uploadVideoToYoutubers(youtuberIds: string[], videoData: { url: string, public_id?: string, resource_type?: string, time?: string }) {
     const videoPromises = youtuberIds.map(async (youtuberId) => {
       const key = `youtuber:${youtuberId}:videos`;
-      await redisClient.rPush(key, JSON.stringify(videoData));
-      await redisClient.expire(key, 24 * 60 * 60);
+      await addToQueue(key, videoData);
     });
     await Promise.all(videoPromises);
     return videoData;
@@ -18,24 +15,23 @@ export class CompanyService {
 
   static async uploadVideoToYoutuber(youtuberId: string, videoData: { url: string, public_id?: string, resource_type?: string, time?: string }) {
     const key = `youtuber:${youtuberId}:videos`;
-    await redisClient.rPush(key, JSON.stringify({
+    await addToQueue(key, {
       ...videoData,
       uploadedAt: new Date().toISOString()
-    }));
-    await redisClient.expire(key, 24 * 60 * 60);
+    });
     return videoData;
   }
 
-  static async getVideo(youtuberId: string,pin: string) {
+  static async getVideo(youtuberId: string, pin: string) {
     const key = `youtuber:${youtuberId}:videos`;
     const youtuber = await YoutuberService.getYoutuberById(youtuberId);
     if (!youtuber) {
       throw new Error('Youtuber not found');
     }
-    if(youtuber.MagicNumber !== Number(pin)){
+    if (youtuber.MagicNumber !== Number(pin)) {
       throw new Error('Url is not correct');
     }
-    const video = await redisClient.lPop(key);
+    const video = await removeFromQueue(key);
     return video ? JSON.parse(video) : null;
   }
 
@@ -97,15 +93,13 @@ export class CompanyService {
     
     // Push the video multiple times based on playsNeeded
     for (let i = 0; i < playsNeeded; i++) {
-      await redisClient.rPush(key, JSON.stringify({
+      await addToQueue(key, {
         ...videoData,
         playNumber: i + 1,
         totalPlays: playsNeeded,
         uploadedAt: new Date().toISOString()
-      }));
+      });
     }
-    
-    await redisClient.expire(key, 24 * 60 * 60);
     return { ...videoData, playsNeeded };
   }
 
@@ -140,16 +134,16 @@ export class CompanyService {
       const key = `youtuber:${youtuberId}:videos`;
       
       // First, peek at the next video without removing it
-      const nextVideo = await redisClient.lIndex(key, 0);
+      const nextVideo = await getNextFromQueue(key);
       
       if (!nextVideo) {
         return null;
       }
 
       // If there is a video, now pop it from the queue
-      await redisClient.lPop(key);
+      await removeFromQueue(key);
       
-      return JSON.parse(nextVideo);
+      return nextVideo;
     } catch (error) {
       console.error('Error getting next video:', error);
       throw error;
@@ -158,6 +152,6 @@ export class CompanyService {
 
   static async getQueueLength(youtuberId: string) {
     const key = `youtuber:${youtuberId}:videos`;
-    return await redisClient.lLen(key);
+    return await getQueueLength(key);
   }
 }
