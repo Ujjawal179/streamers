@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import axios from 'axios';
 import prisma from '../db/db';
 import { CompanyService } from '../services/companyService';
 
@@ -8,6 +9,7 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
   key_secret: process.env.RAZORPAY_KEY_SECRET || ''
 });
+
 
 export const createPaymentOrder = async (req: Request, res: Response) => {
   const { companyId, youtuberId, amount, currency = 'INR', playsNeeded = 1 } = req.body;
@@ -160,12 +162,43 @@ export const verifyPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Payment not captured' });
     }
 
+    // Calculate the amount to be transferred to the YouTuber
+    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.7);
+
+    // Create a payout to the YouTuber's bank account
+    const payoutResponse = await axios.post('https://api.razorpay.com/v1/payouts', {
+      account_number: process.env.RAZORPAY_ACCOUNT_NUMBER, // Your Razorpay account number
+      amount: transferAmount,
+      currency: razorpayPayment.currency,
+      mode: 'IMPS',
+      purpose: 'payout',
+      fund_account: {
+        account_type: 'bank_account',
+        bank_account: {
+          name: payment.youtuber.name,
+          ifsc: payment.youtuber.ifsc,
+          account_number: payment.youtuber.accountNumber
+        },
+        contact: {
+          name: payment.youtuber.name,
+          email: payment.youtuber.email,
+        }
+      },
+      queue_if_low_balance: true
+    }, {
+      auth: {
+        username: process.env.RAZORPAY_KEY_ID || '',
+        password: process.env.RAZORPAY_KEY_SECRET || ''
+      }
+    });
+
     // Update payment status
     const updatedPayment = await prisma.payment.update({
       where: { orderId },
       data: {
         status: 'completed',
-        paymentId
+        paymentId,
+        payoutId: payoutResponse.data.id
       }
     });
 

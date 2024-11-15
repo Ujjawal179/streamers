@@ -85,6 +85,7 @@ model Payment {
   youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
   createdAt   DateTime @default(now())
   playsNeeded Int      @default(1)  // Add this instead of metadata
+  payoutId    String?
 }
 enum Role {
   Youtuber
