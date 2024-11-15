@@ -163,7 +163,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
     }
 
     // Calculate the amount to be transferred to the YouTuber
-    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.7);
+    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.3);
 
     // Create a payout to the YouTuber's bank account
     const payoutResponse = await axios.post('https://api.razorpay.com/v1/payouts', {
