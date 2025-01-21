@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
-import prisma from '../db/db';
+import prisma from '../config/database';
 import { YoutuberService } from '../services/youtuberService';
 
 export class CompanyController {

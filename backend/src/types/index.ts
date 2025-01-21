@@ -1,3 +1,11 @@
+export interface CPMRate {
+  minCCV: number;
+  cpmRate: number;
+  maxIncomePerStream16: number;
+  maxIncomePerStream8: number;
+  maxIncomePerMonth: number;
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -6,6 +14,8 @@ export interface Campaign {
   targetViews: number;
   status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
   companyId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Donation {
@@ -17,6 +27,17 @@ export interface Donation {
   companyId: string;
   youtuberId: string;
   campaignId: string;
+}
+
+export interface StreamAnalytics {
+  youtuberId: string;
+  streamId: string;
+  averageCCV: number;
+  peakCCV: number;
+  totalViews: number;
+  adsPlayed: number;
+  revenue: number;
+  timestamp: Date;
 }
 
 export interface VideoData {

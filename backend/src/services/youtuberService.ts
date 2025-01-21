@@ -15,10 +15,23 @@ export class YoutuberService {
     });
   }
 
-  static async updatePayoutDetails(id: string, ifsc: string, accountNumber: string) {
+  static async updatePayoutDetails(id: string, data: {
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    panCard?: string;
+    upiId?: string;
+  }) {
     return prisma.youtuber.update({
       where: { id },
-      data: { ifsc, accountNumber }
+      data: {
+        bankName: data.bankName,
+        accountNumber: data.accountNumber,
+        ifscCode: data.ifscCode,
+        panCard: data.panCard,
+        upiId: data.upiId,
+        bankVerified: false // Reset verification when details are updated
+      }
     });
   }
 
@@ -55,9 +68,39 @@ export class YoutuberService {
       where: {
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
+          { channelName: { contains: query, mode: 'insensitive' } },
           { channelLink: { contains: query, mode: 'insensitive' } }
         ]
       }
+    });
+  }
+
+  static async verifyBankingDetails(youtuberId: string): Promise<boolean> {
+    const youtuber = await prisma.youtuber.findUnique({
+      where: { id: youtuberId },
+      select: {
+        bankName: true,
+        accountNumber: true,
+        ifscCode: true,
+        panCard: true
+      }
+    });
+
+    return !!(youtuber?.bankName && youtuber?.accountNumber && 
+              youtuber?.ifscCode && youtuber?.panCard);
+  }
+
+  static async updateSettings(id: string, data: {
+    timeout?: number;
+    charge?: number;
+    name?: string;
+    channelLink?: string;
+    phoneNumber?: string;
+    alertBoxUrl?: string;
+  }) {
+    return prisma.youtuber.update({
+      where: { id },
+      data
     });
   }
 }

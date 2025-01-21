@@ -1,59 +1,102 @@
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 import { config } from 'dotenv';
 
-config(); // Load environment variables from .env file
+config();
 
-let redisClient: RedisClientType;
+class RedisService {
+  private static instance: RedisService;
+  private client: any;
+  private isInitialized: boolean = false;
 
-export const setupRedis = async () => {
-  if (!redisClient) {
-    redisClient = createClient({
-      password: process.env.REDIS_PASSWORD,
-      socket: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT)
-      }
+  private constructor() {
+    this.client = createClient({
+      url: process.env.REDIS_URL
     });
 
-    redisClient.on('error', (err) => {
-      console.error('Redis Client Error', err);
-    });
-
-    await redisClient.connect();
-    console.log('Connected to Redis');
+    this.client.on('error', (err: any) => console.error('Redis Client Error', err));
   }
-  return redisClient;
+
+  static getInstance(): RedisService {
+    if (!RedisService.instance) {
+      RedisService.instance = new RedisService();
+    }
+    return RedisService.instance;
+  }
+
+  async initialize() {
+    if (!this.isInitialized) {
+      await this.client.connect();
+      this.isInitialized = true;
+      console.log('Redis initialized successfully');
+    }
+    return this.client;
+  }
+
+  getClient() {
+    if (!this.isInitialized) {
+      throw new Error('Redis not initialized. Call initialize() first');
+    }
+    return this.client;
+  }
+}
+
+// Export a single setupRedis function that ensures initialization
+export const setupRedis = async () => {
+  try {
+    const redisService = RedisService.getInstance();
+    await redisService.initialize();
+    return true;
+  } catch (error) {
+    console.error('Redis initialization failed:', error);
+    throw error;
+  }
 };
 
 export const getRedisClient = () => {
-  if (!redisClient) {
-    throw new Error('Redis client is not initialized. Call setupRedis first.');
-  }
-  return redisClient;
+  return RedisService.getInstance().getClient();
 };
 
-export const addToQueue = async (key: string, value: any) => {
+// Update existing functions to use the singleton client
+export const addToQueue = async (key: string, data: any, score?: number) => {
   const client = getRedisClient();
-  await client.rPush(key, JSON.stringify(value));
-  await client.expire(key, 24 * 60 * 60); // 24 hours TTL
+  const timestamp = score || Date.now();
+  return client.zAdd(key, [{score: timestamp, value: JSON.stringify(data)}]);
 };
 
-export const getNextFromQueue = async (key: string) => {
+export const getNextFromQueue = async (key: string, currentTime = Date.now()) => {
   const client = getRedisClient();
-  const item = await client.lIndex(key, 0);
-  if (!item) return null;
-  return JSON.parse(item);
+  const items = await client.zRangeWithScores(key, 0, 0);
+  if (items.length === 0) return null;
+  
+  const [item] = items;
+  if (item.score > currentTime) return null;
+  
+  return JSON.parse(item.value);
 };
 
 export const removeFromQueue = async (key: string) => {
   const client = getRedisClient();
-  const video =await client.lPop(key);
-  return video;
+  return client.zRemRangeByRank(key, 0, 0);
 };
 
 export const getQueueLength = async (key: string) => {
   const client = getRedisClient();
-  return await client.lLen(key);
+  return client.zCard(key);
 };
 
-export default getRedisClient;
+export const getScheduledAds = async (key: string, start: number, end: number) => {
+  const client = getRedisClient();
+  return client.zRangeByScore(key, start, end);
+};
+
+export const getQueueItems = async (key: string, start = 0, end = -1) => {
+  const client = getRedisClient();
+  const items = await client.zRange(key, start, end, { REV: true });
+  interface QueueItem {
+    [key: string]: any;  // This allows for flexible item structure
+  }
+
+  return items.map((item: string): QueueItem => JSON.parse(item));
+};
+
+export default RedisService;

@@ -1,34 +1,23 @@
-/*
-  Warnings:
-
-  - Added the required column `accountNumber` to the `Youtuber` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `ifsc` to the `Youtuber` table without a default value. This is not possible if the table is not empty.
-
-*/
--- AlterTable
-ALTER TABLE "Youtuber" ADD COLUMN     "accountNumber" TEXT NOT NULL,
-ADD COLUMN     "ifsc" TEXT NOT NULL;
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED');
 
 -- CreateTable
 CREATE TABLE "Payment" (
     "id" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "orderId" TEXT NOT NULL,
+    "playsNeeded" INTEGER NOT NULL DEFAULT 1,
     "companyId" TEXT NOT NULL,
     "youtuberId" TEXT NOT NULL,
-    "amount" INTEGER NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'INR',
-    "status" TEXT NOT NULL,
-    "orderId" TEXT NOT NULL,
-    "paymentId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Payment_orderId_key" ON "Payment"("orderId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Payment_paymentId_key" ON "Payment"("paymentId");
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

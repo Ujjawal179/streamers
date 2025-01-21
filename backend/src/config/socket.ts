@@ -32,10 +32,18 @@ export const configureSocket = (app: Express) => {
       });
     });
 
+    socket.on('joinYoutuberRoom', (youtuberId: string) => {
+      socket.join(`youtuber:${youtuberId}`);
+    });
+
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });
   });
 
   return { server, io };
+};
+
+export const emitQueueUpdate = (io: Server, youtuberId: string, queueData: any) => {
+  io.to(`youtuber:${youtuberId}`).emit('queueUpdate', queueData);
 };

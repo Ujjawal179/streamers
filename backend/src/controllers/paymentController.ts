@@ -4,12 +4,54 @@ import crypto from 'crypto';
 import axios from 'axios';
 import prisma from '../db/db';
 import { CompanyService } from '../services/companyService';
+import { PaymentService } from '../services/paymentService';
+import { PaymentStatus } from '@prisma/client';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
   key_secret: process.env.RAZORPAY_KEY_SECRET || ''
 });
 
+export class PaymentController {
+  static async createPayment(req: Request, res: Response) {
+    try {
+      const { amount, youtuberId, playsNeeded } = req.body;
+      const companyId = (req as any).user?.id;
+
+      const payment = await PaymentService.createPayment({
+        amount,
+        companyId,
+        youtuberId,
+        playsNeeded
+      });
+
+      res.json(payment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async updatePaymentStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status, transactionId } = req.body;
+
+      const payment = await PaymentService.updatePaymentStatus(
+        id,
+        status as PaymentStatus,
+        transactionId
+      );
+
+      if (status === 'PAID') {
+        await PaymentService.processPayment(id);
+      }
+
+      res.json(payment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
 
 export const createPaymentOrder = async (req: Request, res: Response) => {
   const { companyId, youtuberId, amount, currency = 'INR', playsNeeded = 1 } = req.body;
@@ -53,7 +95,7 @@ export const createPaymentOrder = async (req: Request, res: Response) => {
         youtuberId,
         amount,
         currency,
-        status: 'pending',
+        status: 'PENDING',
         orderId: order.id,
         playsNeeded
       }
@@ -163,29 +205,28 @@ export const verifyPayment = async (req: Request, res: Response) => {
     }
 
     // Calculate the amount to be transferred to the YouTuber
-    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.3);
+    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.7);
 
     // Create a payout to the YouTuber's bank account
     const payoutResponse = await axios.post('https://api.razorpay.com/v1/payouts', {
       account_number: process.env.RAZORPAY_ACCOUNT_NUMBER, // Your Razorpay account number
+      fund_account_id: payment.youtuber.accountNumber , // YouTuber's fund account ID
       amount: transferAmount,
       currency: razorpayPayment.currency,
       mode: 'IMPS',
-      purpose: 'payout',
-      fund_account: {
-        account_type: 'bank_account',
-        bank_account: {
-          name: payment.youtuber.name,
-          ifsc: payment.youtuber.ifsc,
-          account_number: payment.youtuber.accountNumber
-        },
-        contact: {
-          name: payment.youtuber.name,
-          email: payment.youtuber.email,
-        }
-      },
-      queue_if_low_balance: true
+      purpose: 'refund',
+      queue_if_low_balance: true,
+      reference_id: `payout_${orderId}`,
+      narration: `Payout for order ${orderId}`,
+      notes: {
+        notes_key_1: "Payment for video promotion",
+        notes_key_2: "YouTuber payout"
+      }
     }, {
+      headers: {
+        'X-Payout-Idempotency': crypto.randomUUID(), // Unique idempotency key
+        'Content-Type': 'application/json'
+      },
       auth: {
         username: process.env.RAZORPAY_KEY_ID || '',
         password: process.env.RAZORPAY_KEY_SECRET || ''

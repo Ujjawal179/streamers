@@ -4,90 +4,169 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL_V1")
 }
 
-model Youtuber {
-  id            String     @id @default(uuid())
-  name          String?
-  email         String     @unique
-  password      String
-  ifsc          String?
-  accountName   String?
-  accountNumber String?
-  channelLink   String?
-  bankDetails   String?
-  phoneNumber   String?
-  MagicNumber   Int?
-  timeout       Int?      @default(15) // Default 15 seconds between messages
-  charge        Int?      @default(100) // Default charge in INR
-  payment       Payment[]
-  campaigns     Campaign[]
-  donations     Donation[]
-  isLive        Boolean    @default(false)
-  alertBoxUrl   String?    // OBS browser source URL
-  createdAt     DateTime   @default(now())
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company?
+  youtuber  Youtuber?
 }
 
 model Company {
-  id          String     @id @default(uuid())
-  name        String
-  description String?
-  email       String     @unique
-  password    String
-  payment     Payment[]
-  donations   Donation[]
-  campaigns   Campaign[]
-  createdAt   DateTime   @default(now())
-}
-
-model Campaign {
-  id          String     @id @default(uuid())
-  name        String
-  description String?
-  budget      Int
-  targetViews Int
-  status      String     @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
-  companyId   String
-  company     Company    @relation(fields: [companyId], references: [id])
-  youtubers   Youtuber[]
-  donations   Donation[]
-  createdAt   DateTime   @default(now())
- 
-}
-
-model Donation {
   id          String   @id @default(uuid())
-  amount      Int
-  message     String?
-  videoUrl    String?
-  status      String   @default("PENDING") // PENDING, PLAYED, FAILED
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  youtuberId  String
-  youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
-  campaignId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  name        String
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  balance     Float    @default(0)
+  campaigns   Campaign[]
+  donations   Donation[]
+  payments    Payment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-model Payment {
-  id          String   @id @default(uuid())
-  companyId   String
-  youtuberId  String
-  amount      Int
-  currency    String   @default("INR")
-  status      String
-  orderId     String   @unique
-  paymentId   String?  @unique
-  company     Company  @relation(fields: [companyId], references: [id])
-  youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
-  createdAt   DateTime @default(now())
-  playsNeeded Int      @default(1)  // Add this instead of metadata
-  payoutId    String?
+model Youtuber {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  channelName     String
+  subscriberCount Int      @default(0)
+  averageViews    Int      @default(0)
+  currentCCV      Int      @default(0)
+  currentStreamId String?
+  isLive          Boolean  @default(false)
+  earnings        Float    @default(0)
+  MagicNumber     Int      @unique
+  charge          Float    @default(0)
+  bankName        String?
+  accountNumber   String?
+  ifscCode        String?
+  panCard         String?
+  upiId           String?
+  bankVerified    Boolean  @default(false)
+  name            String?
+  timeout         Int?     @default(30)  // Default timeout of 30 seconds
+  channelLink     String?
+  phoneNumber     String?
+  alertBoxUrl     String?
+  email           String?   // Add email field
+  campaigns       Campaign[]
+  donations       Donation[]
+  schedules       AdSchedule[]
+  analytics       StreamAnalytics[]
+  payments        Payment[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
+
+model Campaign {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  budget       Float
+  targetViews  Int
+  status       CampaignStatus @default(ACTIVE)
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id])
+  youtubers    Youtuber[]
+  donations    Donation[]
+  currentViews Int       @default(0)
+  totalRevenue Float     @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Donation {
+  id          String    @id @default(uuid())
+  amount      Float
+  message     String?
+  videoUrl    String?
+  status      DonationStatus @default(PENDING)
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
+  youtuberId  String
+  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
+  campaignId  String
+  campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  scheduledFor DateTime?
+  playedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AdSchedule {
+  id          String    @id @default(uuid())
+  youtuberId  String
+  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
+  startTime   DateTime
+  endTime     DateTime
+  maxAdsPerHour Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model StreamAnalytics {
+  id          String    @id @default(uuid())
+  youtuberId  String
+  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
+  streamId    String
+  averageCCV  Int
+  peakCCV     Int
+  totalViews  Int       @default(0)
+  adsPlayed   Int
+  revenue     Float
+  timestamp   DateTime
+  createdAt   DateTime  @default(now())
+}
+
+model Payment {
+  id            String    @id @default(uuid())
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  orderId       String    @unique
+  transactionId String?   // For payment gateway reference
+  playsNeeded   Int       @default(1)
+  earnings      Float     // YouTuber's earnings (after platform fee)
+  platformFee   Float     // Platform's commission
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id])
+  youtuberId    String
+  youtuber      Youtuber @relation(fields: [youtuberId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 enum Role {
-  Youtuber
-  Company
+  USER
+  ADMIN
+  COMPANY
+  YOUTUBER
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum DonationStatus {
+  PENDING
+  PLAYED
+  FAILED
+  SCHEDULED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PROCESSING
 }

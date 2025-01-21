@@ -3,7 +3,7 @@ import { DonationService } from '../services/donationService';
 
 export class DonationController {
     static async createDonation(req: Request, res: Response) {
-        const { amount, message, videoUrl, youtuberId, campaignId } = req.body;
+        const { amount, message, videoUrl, youtuberId, campaignId, scheduledFor } = req.body;
         const companyId = (req as any).user?.id;
 
         try {
@@ -19,7 +19,8 @@ export class DonationController {
                 videoUrl,
                 companyId,
                 youtuberId,
-                campaignId
+                campaignId,
+                scheduledFor: scheduledFor ? new Date(scheduledFor) : undefined
             });
 
             res.json(donation);

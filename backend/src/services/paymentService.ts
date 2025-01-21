@@ -2,6 +2,7 @@ import { razorpay } from '../config/razorpay';
 import prisma from '../config/database';
 import crypto from 'crypto';
 import axios from 'axios';
+import { Payment, PaymentStatus } from '@prisma/client';
 
 interface PaymentOrderInput {
   companyId: string;
@@ -35,7 +36,7 @@ export class PaymentService {
         amount: input.amount,
         orderId: paymentOrder.id,
         paymentId: shortReceipt,
-        status: 'created',
+        status: 'PENDING',
       },
     });
 
@@ -116,5 +117,57 @@ export class PaymentService {
         createdAt: true,
       },
     });
+  }
+
+  static async createPayment(data: {
+    amount: number;
+    companyId: string;
+    youtuberId: string;
+    playsNeeded: number;
+  }) {
+    const platformFee = data.amount * 0.3; // 30% platform fee
+    const earnings = data.amount * 0.7;    // 70% YouTuber earnings
+
+    return prisma.payment.create({
+      data: {
+        amount: data.amount,
+        earnings,
+        platformFee,
+        companyId: data.companyId,
+        youtuberId: data.youtuberId,
+        playsNeeded: data.playsNeeded,
+        orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+    });
+  }
+
+  static async updatePaymentStatus(id: string, status: PaymentStatus, transactionId?: string) {
+    return prisma.payment.update({
+      where: { id },
+      data: {
+        status,
+        transactionId,
+        updatedAt: new Date()
+      }
+    });
+  }
+
+  static async processPayment(paymentId: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { youtuber: true }
+    });
+
+    if (!payment) throw new Error('Payment not found');
+
+    // Update YouTuber earnings
+    await prisma.youtuber.update({
+      where: { id: payment.youtuberId },
+      data: {
+        earnings: { increment: payment.earnings }
+      }
+    });
+
+    return this.updatePaymentStatus(paymentId, 'PAID');
   }
 }

@@ -14,7 +14,9 @@ export class CampaignController {
                 targetViews,
                 companyId,
                 youtuberIds,
-                status: 'ACTIVE'
+                status: 'ACTIVE',
+                createdAt: new Date(),
+                updatedAt: new Date()
             });
 
             res.json(campaign);

@@ -1,14 +1,25 @@
-import prisma from '../db/db';
+import prisma from '../config/database';
 import { YoutuberService } from './youtuberService';
+import { ScheduleService } from './scheduleService';
 import { addToQueue, getNextFromQueue, removeFromQueue, getQueueLength } from '../config/redis';
+import { Prisma } from '@prisma/client';
 
 export class CompanyService {
 
-  static async uploadVideoToYoutubers(youtuberIds: string[], videoData: { url: string, public_id?: string, resource_type?: string, time?: string }) {
+  static async uploadVideoToYoutubers(youtuberIds: string[], videoData: { url: string, public_id?: string, resource_type?: string, time?: string }, scheduledTime?: Date) {
     const videoPromises = youtuberIds.map(async (youtuberId) => {
       const key = `youtuber:${youtuberId}:videos`;
-      await addToQueue(key, videoData);
+      
+      if (scheduledTime) {
+        const validSlot = await ScheduleService.validateScheduleSlot(youtuberId, scheduledTime);
+        if (!validSlot.valid) {
+          throw new Error(`Invalid slot for youtuber ${youtuberId}: ${validSlot.reason}`);
+        }
+      }
+
+      await addToQueue(key, videoData, scheduledTime?.getTime());
     });
+
     await Promise.all(videoPromises);
     return videoData;
   }
@@ -38,9 +49,10 @@ export class CompanyService {
   static async getYoutubers(requiredViews: number) {
     return prisma.youtuber.findMany({
       where: {
-        charge: {
-          lte: requiredViews,
-        },
+        AND: [
+          { isLive: true },
+          { charge: { gt: 0 } }
+        ]
       },
       orderBy: {
         charge: 'asc',
@@ -109,7 +121,7 @@ export class CompanyService {
         companyId,
         youtuberId,
         amount,
-        status: 'pending',
+        status: 'PENDING',
         orderId: `order_${Date.now()}`,
         playsNeeded: playsNeeded  // Use the new field directly
       }
@@ -122,7 +134,7 @@ export class CompanyService {
         companyId,
         youtuberId,
         amount,
-        status: 'pending',
+        status: 'PENDING',
         orderId: `order_${Date.now()}`,
         playsNeeded: 1  // Default to 1 play
       }
@@ -153,5 +165,38 @@ export class CompanyService {
   static async getQueueLength(youtuberId: string) {
     const key = `youtuber:${youtuberId}:videos`;
     return await getQueueLength(key);
+  }
+
+  // Fix analytics creation
+  static async createStreamAnalytics(data: {
+    youtuberId: string;
+    streamId: string;
+    averageCCV: number;
+    peakCCV: number;
+    adsPlayed: number;
+    revenue: number;
+  }) {
+    return prisma.streamAnalytics.create({
+      data: {
+        ...data,
+        totalViews: data.averageCCV, // Set initial total views
+        timestamp: new Date()
+      }
+    });
+  }
+
+  // Fix campaign analytics query
+  static async getCampaignAnalytics(campaignId: string) {
+    const analytics = await prisma.streamAnalytics.findMany({
+      where: {
+        youtuber: {
+          donations: {
+            some: { campaignId }
+          }
+        }
+      }
+    });
+
+    // ...rest of the code
   }
 }
