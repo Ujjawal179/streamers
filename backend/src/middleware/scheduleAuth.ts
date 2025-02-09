@@ -48,7 +48,7 @@ export const verifyScheduleOwnership = async (
         youtuber: {
           select: {
             id: true,
-            channelName: true,
+            channelLink: true,
             isLive: true
           }
         }

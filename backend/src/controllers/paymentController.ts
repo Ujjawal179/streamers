@@ -15,8 +15,7 @@ const razorpay = new Razorpay({
 export class PaymentController {
   static async createPayment(req: Request, res: Response) {
     try {
-      const { amount, youtuberId, playsNeeded } = req.body;
-      const companyId = (req as any).user?.id;
+      const { amount, youtuberId, playsNeeded, companyId } = req.body;
 
       const payment = await PaymentService.createPayment({
         amount,
@@ -94,10 +93,11 @@ export const createPaymentOrder = async (req: Request, res: Response) => {
         companyId,
         youtuberId,
         amount,
-        currency,
         status: 'PENDING',
         orderId: order.id,
-        playsNeeded
+        playsNeeded,
+        earnings: 0,
+        platformFee: 0
       }
     });
 
@@ -147,9 +147,10 @@ export const createPaymentOrderForCampaign = async (req: Request, res: Response)
             companyId,
             youtuberId: youtuber.id,
             amount: youtuber.charge || 0,
-            currency,
-            status: 'created',
-            orderId: order.id
+            orderId: order.id,
+            earnings: 0,
+            platformFee: 0,
+            status: 'PENDING'
           }
         })
       )
@@ -166,11 +167,14 @@ export const verifyPayment = async (req: Request, res: Response) => {
   const { orderId, paymentId, signature, videoData } = req.body;
 
   try {
-    // Fetch payment details from database
     const payment = await prisma.payment.findUnique({
       where: { orderId },
       include: {
-        youtuber: true,
+        youtuber: {
+          include: {
+            user: true  // Include user data to get linked user details
+          }
+        },
         company: true
       }
     });
@@ -189,7 +193,10 @@ export const verifyPayment = async (req: Request, res: Response) => {
     if (signature !== expectedSignature) {
       await prisma.payment.update({
         where: { orderId },
-        data: { status: 'failed' }
+        data: { 
+          status: PaymentStatus.FAILED,
+          transactionId: paymentId
+        }
       });
       return res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
@@ -199,55 +206,108 @@ export const verifyPayment = async (req: Request, res: Response) => {
     if (razorpayPayment.status !== 'captured') {
       await prisma.payment.update({
         where: { orderId },
-        data: { status: 'failed' }
+        data: { 
+          status: PaymentStatus.FAILED,
+          transactionId: paymentId
+        }
       });
       return res.status(400).json({ success: false, message: 'Payment not captured' });
     }
 
-    // Calculate the amount to be transferred to the YouTuber
-    const transferAmount = Math.floor(Number(razorpayPayment.amount) * 0.7);
+    // Calculate platform fee and YouTuber earnings
+    const platformFee = Math.floor(Number(razorpayPayment.amount) * 0.3); // 30% platform fee
+    const earnings = Number(razorpayPayment.amount) - platformFee;
 
-    // Create a payout to the YouTuber's bank account
-    const payoutResponse = await axios.post('https://api.razorpay.com/v1/payouts', {
-      account_number: process.env.RAZORPAY_ACCOUNT_NUMBER, // Your Razorpay account number
-      fund_account_id: payment.youtuber.accountNumber , // YouTuber's fund account ID
-      amount: transferAmount,
-      currency: razorpayPayment.currency,
-      mode: 'IMPS',
-      purpose: 'refund',
-      queue_if_low_balance: true,
-      reference_id: `payout_${orderId}`,
-      narration: `Payout for order ${orderId}`,
-      notes: {
-        notes_key_1: "Payment for video promotion",
-        notes_key_2: "YouTuber payout"
-      }
-    }, {
-      headers: {
-        'X-Payout-Idempotency': crypto.randomUUID(), // Unique idempotency key
-        'Content-Type': 'application/json'
-      },
-      auth: {
-        username: process.env.RAZORPAY_KEY_ID || '',
-        password: process.env.RAZORPAY_KEY_SECRET || ''
-      }
-    });
+    // Verify YouTuber's bank details before attempting payout
+    if (!payment.youtuber.bankVerified) {
+      await prisma.payment.update({
+        where: { orderId },
+        data: { 
+          status: PaymentStatus.PROCESSING,
+          transactionId: paymentId,
+          earnings,
+          platformFee
+        }
+      });
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Payment received but payout pending - Bank details not verified',
+        status: 'PROCESSING'
+      });
+    }
 
-    // Update payment status
-    const updatedPayment = await prisma.payment.update({
-      where: { orderId },
-      data: {
-        status: 'completed',
-        paymentId,
-        payoutId: payoutResponse.data.id
-      }
-    });
+    // Only attempt payout if bank details exist
+    if (payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode) {
+      try {
+        const payoutResponse = await axios.post(
+          'https://api.razorpay.com/v1/payouts',
+          {
+            account_number: process.env.RAZORPAY_ACCOUNT_NUMBER,
+            fund_account_id: payment.youtuber.accountNumber,
+            amount: earnings,
+            currency: razorpayPayment.currency,
+            mode: 'IMPS',
+            purpose: 'payout',
+            queue_if_low_balance: true,
+            reference_id: `payout_${orderId}`,
+            narration: `Payout for order ${orderId}`
+          },
+          {
+            headers: {
+              'X-Payout-Idempotency': crypto.randomUUID(),
+              'Content-Type': 'application/json'
+            },
+            auth: {
+              username: process.env.RAZORPAY_KEY_ID || '',
+              password: process.env.RAZORPAY_KEY_SECRET || ''
+            }
+          }
+        );
 
-    // If payment is successful and video data is provided, upload to YouTuber's queue
+        // Update payment status
+        await prisma.payment.update({
+          where: { orderId },
+          data: {
+            status: PaymentStatus.PAID,
+            transactionId: paymentId,
+            earnings,
+            platformFee
+          }
+        });
+
+        // Update YouTuber's earnings
+        await prisma.youtuber.update({
+          where: { id: payment.youtuberId },
+          data: {
+            earnings: {
+              increment: earnings
+            }
+          }
+        });
+      } catch (payoutError) {
+        console.error('Payout failed:', payoutError);
+        await prisma.payment.update({
+          where: { orderId },
+          data: {
+            status: PaymentStatus.PROCESSING,
+            transactionId: paymentId,
+            earnings,
+            platformFee
+          }
+        });
+        return res.status(200).json({
+          success: true,
+          message: 'Payment received but payout failed - Will retry automatically',
+          status: 'PROCESSING'
+        });
+      }
+    }
+
+    // Handle video upload if payment is successful
     if (videoData && payment.playsNeeded > 1) {
       await CompanyService.uploadVideoToYoutuberWithPlays(
-        payment.youtuberId, 
-        videoData, 
+        payment.youtuberId,
+        videoData,
         payment.playsNeeded
       );
     } else if (videoData) {
@@ -256,8 +316,14 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      message: 'Payment verified successfully',
-      payment: updatedPayment
+      message: 'Payment processed successfully',
+      payment: {
+        orderId,
+        paymentId,
+        status: PaymentStatus.PAID,
+        earnings,
+        platformFee
+      }
     });
   } catch (error) {
     console.error('Payment verification error:', error);
@@ -305,7 +371,6 @@ export const getYoutuberPayments = async (req: Request, res: Response) => {
     const payments = await prisma.payment.findMany({
       where: { 
         youtuberId,
-        status: 'completed'
       },
       orderBy: {
         createdAt: 'desc'

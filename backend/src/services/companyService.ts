@@ -118,12 +118,15 @@ export class CompanyService {
   static async createPaymentWithPlays(companyId: string, youtuberId: string, amount: number, playsNeeded: number) {
     return prisma.payment.create({
       data: {
+        paymentId: `payment_${Date.now()}`,
         companyId,
         youtuberId,
         amount,
         status: 'PENDING',
         orderId: `order_${Date.now()}`,
-        playsNeeded: playsNeeded  // Use the new field directly
+        playsNeeded: playsNeeded,  // Use the new field directly
+        earnings: 0,
+        platformFee: 0
       }
     });
   }
@@ -131,12 +134,15 @@ export class CompanyService {
   static async createPayment(companyId: string, youtuberId: string, amount: number) {
     return prisma.payment.create({
       data: {
+        paymentId: `payment_${Date.now()}`,
         companyId,
         youtuberId,
         amount,
         status: 'PENDING',
         orderId: `order_${Date.now()}`,
-        playsNeeded: 1  // Default to 1 play
+        playsNeeded: 1,  // Default to 1 play
+        earnings: 0,
+        platformFee: 0
       }
     });
   }

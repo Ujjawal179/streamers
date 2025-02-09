@@ -1,21 +1,35 @@
 import { Request, Response } from 'express';
 import prisma from '../db/db';
 import { BankingDetails } from '../types/banking';
+import { YoutuberService } from '../services/youtuberService';
 
 export class YoutuberController {
   static async updateYoutuber(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'No id provided'
+        });
+      }
       const youtuber = await prisma.youtuber.update({
         where: { id },
         data: req.body
       });
-      res.json(youtuber);
+      return res.status(200).json({
+        success: true,
+        data: youtuber
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to update youtuber' });
+      console.error('Update youtuber error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update youtuber'
+      });
     }
   }
-
+  
   static async getUsername(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -23,23 +37,35 @@ export class YoutuberController {
         where: { id },
         select: { 
           name: true,
-          channelName: true, // Fallback if name isn't set
+          channelLink: true, // Changed from channelName to channelLink
           charge: true,
           isLive: true,
           timeout: true
         }
       });
       
-      if (!youtuber) return res.status(404).json({ error: 'Youtuber not found' });
+      if (!youtuber) {
+        return res.status(404).json({
+          success: false,
+          error: 'Youtuber not found'
+        });
+      }
       
-      res.json({ 
-        username: youtuber.name || youtuber.channelName,
-        charge: youtuber.charge,
-        isLive: youtuber.isLive,
-        timeout: youtuber.timeout || 30 // Default timeout
+      return res.status(200).json({
+        success: true,
+        data: {
+          username: youtuber.name || youtuber.channelLink[0], // Use first channel link if name not set
+          charge: youtuber.charge,
+          isLive: youtuber.isLive,
+          timeout: youtuber.timeout || 30
+        }
       });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch username' });
+      console.error('Get username error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch username'
+      });
     }
   }
 
@@ -60,10 +86,24 @@ export class YoutuberController {
           alertBoxUrl: true
         }
       });
-      if (!youtuber) return res.status(404).json({ error: 'Youtuber not found' });
-      res.json(youtuber);
+
+      if (!youtuber) {
+        return res.status(404).json({
+          success: false,
+          error: 'Youtuber not found'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: youtuber
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch youtuber details' });
+      console.error('Get youtuber details error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch youtuber details'
+      });
     }
   }
 
@@ -81,9 +121,16 @@ export class YoutuberController {
         alertBoxUrl
       });
       
-      res.json(youtuber);
+      return res.status(200).json({
+        success: true,
+        data: youtuber
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to update settings' });
+      console.error('Update settings error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update settings'
+      });
     }
   }
 
@@ -97,21 +144,98 @@ export class YoutuberController {
           }
         }
       });
-      res.json(campaigns);
+
+      return res.status(200).json({
+        success: true,
+        data: campaigns
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch campaigns' });
+      console.error('Get campaigns error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch campaigns'
+      });
     }
   }
 
   static async updatePayoutDetails(req: Request, res: Response) {
-    const { youtuberId } = req.params;
-    const bankingDetails: BankingDetails = req.body;
-
     try {
+      const { youtuberId } = req.params;
+      const bankingDetails: BankingDetails = req.body;
+
       const youtuber = await YoutuberService.updatePayoutDetails(youtuberId, bankingDetails);
-      res.json(youtuber);
+      
+      return res.status(200).json({
+        success: true,
+        data: youtuber
+      });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Update payout details error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to update payout details'
+      });
+    }
+  }
+
+  static async deleteYoutuber(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const youtuber = await prisma.youtuber.findUnique({
+        where: { id },
+        select: { userId: true }
+      });
+
+      if (!youtuber) {
+        return res.status(404).json({
+          success: false,
+          error: 'Youtuber not found'
+        });
+      }
+
+      // Only delete youtuber profile data, keep transactions
+      await prisma.youtuber.update({
+        where: { id },
+        data: {
+          name: null,
+          email: null,
+          channelLink: [],
+          phoneNumber: null,
+          bankName: null,
+          accountNumber: null,
+          ifscCode: null,
+          panCard: null,
+          upiId: null,
+          avatar: null,
+          description: null,
+          address: null,
+          vat: null,
+          country: null,
+          city: null,
+          zip: null
+        }
+      });
+
+      // Deactivate user account
+      await prisma.user.update({
+        where: { id: youtuber.userId },
+        data: {
+          email: `deleted_${Date.now()}_${youtuber.userId}@deleted.com`,
+          password: 'DELETED_ACCOUNT'
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Youtuber data deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete youtuber error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete youtuber data'
+      });
     }
   }
 }

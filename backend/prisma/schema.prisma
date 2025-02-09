@@ -30,13 +30,17 @@ model Company {
   payments    Payment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  address     String?
+  country         String?
+  city            String?
+  zip             Int?
 }
 
 model Youtuber {
   id              String   @id @default(uuid())
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id])
-  channelName     String
+  channelName     String?
   subscriberCount Int      @default(0)
   averageViews    Int      @default(0)
   currentCCV      Int      @default(0)
@@ -46,6 +50,7 @@ model Youtuber {
   MagicNumber     Int      @unique
   charge          Float    @default(0)
   bankName        String?
+  accountName     String?
   accountNumber   String?
   ifscCode        String?
   panCard         String?
@@ -53,7 +58,7 @@ model Youtuber {
   bankVerified    Boolean  @default(false)
   name            String?
   timeout         Int?     @default(30)  // Default timeout of 30 seconds
-  channelLink     String?
+  channelLink     String[]
   phoneNumber     String?
   alertBoxUrl     String?
   email           String?   // Add email field
@@ -64,6 +69,13 @@ model Youtuber {
   payments        Payment[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  avatar          String?
+  description     String?
+  address         String?
+  vat             String?
+  country         String?
+  city            String?
+  zip             Int?
 }
 
 model Campaign {
@@ -131,6 +143,8 @@ model Payment {
   amount        Float
   status        PaymentStatus @default(PENDING)
   orderId       String    @unique
+  paymentId     String?
+  payoutId     String?
   transactionId String?   // For payment gateway reference
   playsNeeded   Int       @default(1)
   earnings      Float     // YouTuber's earnings (after platform fee)

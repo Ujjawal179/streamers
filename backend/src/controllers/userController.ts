@@ -25,7 +25,6 @@ const loginSchema = z.object({
 export const register = async (req: Request, res: Response) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
-
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
@@ -39,62 +38,76 @@ export const register = async (req: Request, res: Response) => {
     const { name, email, password, userType } = parseResult.data;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (userType === 'company') {
-      const existingCompany = await prisma.company.findUnique({ where: { email } });
-      if (existingCompany) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email already registered'
-        });
-      }
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
 
-      const company = await prisma.company.create({
-        data: { name, email, password: hashedPassword }
+    if (userType === 'company') {
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          role: 'COMPANY',
+          company: {
+            create: {
+              name
+            }
+          }
+        },
+        include: {
+          company: true
+        }
       });
 
       const token = jwt.sign(
-        { id: company.id, userType },
+        { id: user.id, userType },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       return res.status(201).json({
         success: true,
-        user: { ...company, password: undefined },
+        user: { ...user, password: undefined },
         userType,
         token
       });
     }
 
-    const existingYoutuber = await prisma.youtuber.findUnique({ where: { email } });
-    if (existingYoutuber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered'
-      });
-    }
-    const magicNumbr= generateUniqueCode();
-    console.log(magicNumbr);
-
-    const youtuber = await prisma.youtuber.create({
+    const magicNumber = generateUniqueCode();
+    const user = await prisma.user.create({
       data: {
-        name,
         email,
         password: hashedPassword,
-        alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`,
-        MagicNumber:generateUniqueCode()
+        role: 'YOUTUBER',
+        youtuber: {
+          create: {
+            channelLink: [],
+            alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`,
+            MagicNumber: magicNumber,
+            name,
+            email
+          }
+        }
+      },
+      include: {
+        youtuber: true
       }
     });
 
     const token = jwt.sign(
-      { id: youtuber.id, userType },
+      { id: user.id, userType },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     return res.status(201).json({
       success: true,
-      user: { ...youtuber, password: undefined },
+      user: { ...user, password: undefined },
       userType,
       token
     });
@@ -111,7 +124,6 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
-
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
@@ -124,48 +136,44 @@ export const login = async (req: Request, res: Response) => {
 
     const { email, password, userType } = parseResult.data;
 
-    if (userType === 'company') {
-      const company = await prisma.company.findUnique({ where: { email } });
-      
-      if (!company || !await bcrypt.compare(password, company.password)) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
-        });
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        company: true,
+        youtuber: true
       }
+    });
 
-      const token = jwt.sign(
-        { id: company.id, userType },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      return res.status(200).json({
-        success: true,
-        user: { ...company, password: undefined },
-        userType,
-        token
-      });
-    }
-
-    const youtuber = await prisma.youtuber.findUnique({ where: { email } });
-    
-    if (!youtuber || !await bcrypt.compare(password, youtuber.password)) {
+    if (!user || !await bcrypt.compare(password, user.password)) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
+    // Check if user type matches
+    if ((userType === 'company' && !user.company) || 
+        (userType === 'youtuber' && !user.youtuber)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid account type'
+      });
+    }
+
     const token = jwt.sign(
-      { id: youtuber.id, userType },
+      { id: user.id, userType },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     return res.status(200).json({
       success: true,
-      user: { ...youtuber, password: undefined },
+      user: {
+        ...user,
+        password: undefined,
+        profile: userType === 'company' ? user.company : user.youtuber
+      },
       userType,
       token
     });
@@ -178,6 +186,7 @@ export const login = async (req: Request, res: Response) => {
     });
   }
 };
+
 export const getCloudinarySignature = (req: Request, res: Response) => {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);

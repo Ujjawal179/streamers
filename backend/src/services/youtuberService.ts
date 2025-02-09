@@ -68,8 +68,9 @@ export class YoutuberService {
       where: {
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
-          { channelName: { contains: query, mode: 'insensitive' } },
-          { channelLink: { contains: query, mode: 'insensitive' } }
+          { channelName: { contains: query, mode: 'insensitive' } }
+          // { channelLink: { contains: query, mode: 'insensitive' } }
+
         ]
       }
     });
@@ -94,7 +95,7 @@ export class YoutuberService {
     timeout?: number;
     charge?: number;
     name?: string;
-    channelLink?: string;
+    channelLink?: string[];
     phoneNumber?: string;
     alertBoxUrl?: string;
   }) {

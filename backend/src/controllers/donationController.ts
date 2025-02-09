@@ -9,6 +9,7 @@ export class DonationController {
         try {
             if (!amount || !youtuberId || !campaignId) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Missing required fields: amount, youtuberId, or campaignId'
                 });
             }
@@ -23,10 +24,15 @@ export class DonationController {
                 scheduledFor: scheduledFor ? new Date(scheduledFor) : undefined
             });
 
-            res.json(donation);
+            return res.status(201).json({
+                success: true,
+                data: donation
+            });
+
         } catch (error: any) {
             console.error('Error creating donation:', error);
-            res.status(500).json({
+            return res.status(500).json({
+                success: false,
                 message: 'Failed to create donation',
                 error: error.message
             });
@@ -39,6 +45,7 @@ export class DonationController {
         try {
             if (!youtuberId) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Missing youtuberId parameter'
                 });
             }
@@ -47,14 +54,20 @@ export class DonationController {
 
             if (!donation) {
                 return res.status(404).json({
+                    success: false,
                     message: 'No pending donations'
                 });
             }
 
-            res.json(donation);
+            return res.status(200).json({
+                success: true,
+                data: donation
+            });
+
         } catch (error: any) {
             console.error('Error fetching next donation:', error);
-            res.status(500).json({
+            return res.status(500).json({
+                success: false,
                 message: 'Failed to get next donation',
                 error: error.message
             });
@@ -83,15 +96,22 @@ export class DonationController {
         try {
             if (!id || !status) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Missing required fields: id or status'
                 });
             }
 
             const updatedDonation = await DonationService.updateDonationStatus(id, status);
-            res.json(updatedDonation);
+            
+            return res.status(200).json({
+                success: true,
+                data: updatedDonation
+            });
+
         } catch (error: any) {
             console.error('Error updating donation status:', error);
-            res.status(500).json({
+            return res.status(500).json({
+                success: false,
                 message: 'Failed to update donation status',
                 error: error.message
             });
@@ -102,11 +122,24 @@ export class DonationController {
         const { youtuberId } = req.params;
 
         try {
+            if (!youtuberId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing youtuberId parameter'
+                });
+            }
+
             const donations = await DonationService.getYoutuberDonations(youtuberId);
-            res.json(donations);
+            
+            return res.status(200).json({
+                success: true,
+                data: donations
+            });
+
         } catch (error: any) {
             console.error('Error fetching youtuber donations:', error);
-            res.status(500).json({
+            return res.status(500).json({
+                success: false,
                 message: 'Failed to fetch youtuber donations',
                 error: error.message
             });

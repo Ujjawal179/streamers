@@ -2,18 +2,13 @@ import { Router } from 'express';
 import { auth } from '../middleware/auth';
 const router = Router();
 
-import { 
-  updateYoutuber,
-  getUsername,
-  getYoutuberDetails,
-  updateSettings,
-  getYoutuberCampaigns
-} from '../controllers/youtuberController';
+import { YoutuberController } from '../controllers/youtuberController';
 
-router.put('/:id', auth, updateYoutuber);
-router.get('/:id/username', getUsername);
-router.get('/:id', getYoutuberDetails);
-router.put('/:id/settings', auth, updateSettings);
-router.get('/:id/campaigns', auth, getYoutuberCampaigns);
+router.put('/:id', auth, YoutuberController.updateYoutuber);
+router.get('/:id/username', YoutuberController.getUsername);
+router.get('/:id', YoutuberController.getYoutuberDetails);
+router.put('/:id/settings', auth, YoutuberController.updateSettings);
+router.get('/:id/campaigns', auth, YoutuberController.getYoutuberCampaigns);
+router.delete('/:id', auth, YoutuberController.deleteYoutuber);
 
 export default router;

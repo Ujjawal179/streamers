@@ -37,6 +37,8 @@ export class PaymentService {
         orderId: paymentOrder.id,
         paymentId: shortReceipt,
         status: 'PENDING',
+        earnings: input.amount * 0.7,
+        platformFee: input.amount * 0.3,
       },
     });
 
@@ -62,7 +64,7 @@ export class PaymentService {
 
     await prisma.payment.update({
       where: { orderId: input.orderId },
-      data: { status: 'paid', paymentId: input.paymentId },
+      data: { status: 'PAID', paymentId: input.paymentId },
     });
 
     const youtuberShare = payment.amount * 0.7;
@@ -73,7 +75,7 @@ export class PaymentService {
         account_type: 'bank_account',
         bank_account: {
           name: payment.youtuber.name,
-          ifsc: payment.youtuber.ifsc,
+          ifsc: payment.youtuber.ifscCode,
           account_number: payment.youtuber.accountNumber,
         },
         contact: {
@@ -125,8 +127,16 @@ export class PaymentService {
     youtuberId: string;
     playsNeeded: number;
   }) {
+    // Validate company exists to satisfy foreign key constraint
+    const companyExists = await prisma.company.findUnique({
+      where: { id: data.companyId }
+    });
+    if (!companyExists) {
+      throw new Error('Invalid company id. Company does not exist.');
+    }
     const platformFee = data.amount * 0.3; // 30% platform fee
     const earnings = data.amount * 0.7;    // 70% YouTuber earnings
+    const randomString = () => Math.random().toString(36).slice(2, 11);
 
     return prisma.payment.create({
       data: {
@@ -136,7 +146,8 @@ export class PaymentService {
         companyId: data.companyId,
         youtuberId: data.youtuberId,
         playsNeeded: data.playsNeeded,
-        orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        orderId: `order_${Date.now()}_${randomString()}`,
+        paymentId: `pay_${Date.now()}_${randomString()}`
       }
     });
   }

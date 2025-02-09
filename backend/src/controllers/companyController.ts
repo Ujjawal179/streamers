@@ -262,4 +262,79 @@ export class CompanyController {
       });
     }
   }
+  static async updateCompany(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'No id provided'
+        });
+      }
+      const company = await prisma.company.update({
+        where: { id },
+        data: req.body
+      });
+      return res.status(200).json({
+        success: true,
+        data: company
+      });
+    } catch (error) {
+      console.error('Update company error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update company'
+      });
+    }
+  }
+
+  static async deleteCompany(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const company = await prisma.company.findUnique({
+        where: { id },
+        select: { userId: true }
+      });
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          error: 'Company not found'
+        });
+      }
+
+      // Only delete company profile data, keep transactions
+      await prisma.company.update({
+        where: { id },
+        data: {
+          name: "",
+          address: null,
+          country: null,
+          city: null,
+          zip: null
+        }
+      });
+
+      // Deactivate user account
+      await prisma.user.update({
+        where: { id: company.userId },
+        data: {
+          email: `deleted_${Date.now()}_${company.userId}@deleted.com`,
+          password: 'DELETED_ACCOUNT'
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Company data deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete company error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete company data'
+      });
+    }
+  }
 }
