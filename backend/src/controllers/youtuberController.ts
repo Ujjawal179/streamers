@@ -13,6 +13,9 @@ export class YoutuberController {
           error: 'No id provided'
         });
       }
+      if (req.body.avgViews !== undefined) {
+        req.body.charge = YoutuberService.calculateYouTubeAdCost(req.body.avgViews);
+      }
       const youtuber = await prisma.youtuber.update({
         where: { id },
         data: req.body

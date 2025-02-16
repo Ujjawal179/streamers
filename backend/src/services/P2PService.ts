@@ -41,7 +41,7 @@ export class P2PService {
     // 4. Add to queue
     await VideoQueueService.addToYoutuberQueue(
       youtuberId, 
-      { ...videoData, paymentId: payment.id },
+      { ...videoData, paymentId: payment.id, playNumber: 1, totalPlays: 1 },
       scheduledTime?.getTime()
     );
 

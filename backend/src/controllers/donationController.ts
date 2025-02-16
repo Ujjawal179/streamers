@@ -26,7 +26,9 @@ export class DonationController {
             // Add to YouTuber's queue
             await VideoQueueService.addToYoutuberQueue(youtuberId, {
                 url: videoUrl,
-                donationId: donation.id
+                donationId: donation.id,
+                playNumber: 1,
+                totalPlays: 1
             });
 
             res.json({ success: true, data: donation });

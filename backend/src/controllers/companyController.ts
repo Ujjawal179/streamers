@@ -33,7 +33,9 @@ export class CompanyController {
       // Add to queue
       await VideoQueueService.addToYoutuberQueue(youtuberId, { 
         url,
-        paymentId: payment.id 
+        paymentId: payment.id,
+        playNumber: 1,
+        totalPlays: 1
       });
 
       res.json({

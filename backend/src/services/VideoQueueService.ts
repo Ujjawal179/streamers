@@ -2,13 +2,21 @@ import { addToQueue, removeFromQueue, getNextFromQueue, getQueueLength, getRedis
 import { IVideoUpload } from '../interfaces/IVideoUpload';
 
 export class VideoQueueService {
-  static async addToYoutuberQueue(youtuberId: string, video: IVideoUpload, scheduledTime?: number) {
+  static async addToYoutuberQueue(youtuberId: string, video: IVideoUpload & {
+    playNumber: number;
+    totalPlays: number;
+  }, scheduledTime?: number) {
     const key = `youtuber:${youtuberId}:videos`;
-    return addToQueue(key, {
+    const queueItem = {
       ...video,
       uploadedAt: new Date().toISOString(),
-      playsNeeded: video.playsNeeded || 1 // Set default to 1 if not provided
-    }, scheduledTime);
+      sequence: {
+        current: video.playNumber,
+        total: video.totalPlays
+      }
+    };
+
+    return addToQueue(key, queueItem, scheduledTime);
   }
 
   static async getNextVideo(youtuberId: string) {

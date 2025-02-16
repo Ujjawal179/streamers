@@ -17,15 +17,6 @@ interface PayoutVerificationInput {
   signature: string;
 }
 
-interface CreatePaymentInput {
-  companyId: string;
-  youtuberId: string;
-  amount: number;
-  playsNeeded: number;
-  campaignId?: string;
-  status?: PaymentStatus;
-}
-
 export class PaymentService {
   static async createPaymentOrder(input: PaymentOrderInput) {
     const timestamp = Date.now().toString().slice(-6);
@@ -130,21 +121,33 @@ export class PaymentService {
     });
   }
 
-  static async createPayment(input: CreatePaymentInput) {
-    const timestamp = Date.now().toString().slice(-6);
-    const orderId = `order_${timestamp}`;
-    
+  static async createPayment(data: {
+    amount: number;
+    companyId: string;
+    youtuberId: string;
+    playsNeeded: number;
+  }) {
+    // Validate company exists to satisfy foreign key constraint
+    const companyExists = await prisma.company.findUnique({
+      where: { id: data.companyId }
+    });
+    if (!companyExists) {
+      throw new Error('Invalid company id. Company does not exist.');
+    }
+    const platformFee = data.amount * 0.3; // 30% platform fee
+    const earnings = data.amount * 0.7;    // 70% YouTuber earnings
+    const randomString = () => Math.random().toString(36).slice(2, 11);
+
     return prisma.payment.create({
       data: {
-        companyId: input.companyId,
-        youtuberId: input.youtuberId,
-        amount: input.amount,
-        playsNeeded: input.playsNeeded,
-        campaignId: input.campaignId,
-        status: input.status || 'PENDING',
-        earnings: input.amount * 0.7, // 70% for YouTuber
-        platformFee: input.amount * 0.3, // 30% platform fee
-        orderId: orderId
+        amount: data.amount,
+        earnings,
+        platformFee,
+        companyId: data.companyId,
+        youtuberId: data.youtuberId,
+        playsNeeded: data.playsNeeded,
+        orderId: `order_${Date.now()}_${randomString()}`,
+        paymentId: `pay_${Date.now()}_${randomString()}`
       }
     });
   }

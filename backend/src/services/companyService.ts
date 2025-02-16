@@ -78,7 +78,11 @@ export class CompanyService {
   ) {
     return Promise.all(
       youtuberIds.map(youtuberId => 
-        VideoQueueService.addToYoutuberQueue(youtuberId, videoData)
+        VideoQueueService.addToYoutuberQueue(youtuberId, {
+          ...videoData,
+          playNumber: 1,
+          totalPlays: 1
+        })
       )
     );
   }
@@ -174,8 +178,6 @@ export class CompanyService {
           youtuberId: youtuber.id,
           amount: cost,
           playsNeeded,
-          campaignId: campaignRecord.id,
-          status: 'PENDING'
         });
 
         // Add videos to YouTuber's queue
@@ -242,17 +244,14 @@ export class CompanyService {
     videoData: IVideoUpload, 
     playsNeeded: number
   ) {
-    const promises = [];
-    for (let i = 0; i < playsNeeded; i++) {
-      promises.push(
-        VideoQueueService.addToYoutuberQueue(youtuberId, {
-          ...videoData,
-          playNumber: i + 1,
-          totalPlays: playsNeeded,
-          playsNeeded
-        })
-      );
-    }
+    const promises = Array(playsNeeded).fill(null).map((_, index) =>
+      VideoQueueService.addToYoutuberQueue(youtuberId, {
+        ...videoData,
+        playNumber: index + 1,
+        totalPlays: playsNeeded
+      })
+    );
+
     return Promise.all(promises);
   }
 
@@ -263,8 +262,7 @@ export class CompanyService {
     return VideoQueueService.addToYoutuberQueue(youtuberId, {
       ...videoData,
       playNumber: 1,
-      totalPlays: 1,
-      playsNeeded: 1
+      totalPlays: 1
     });
   }
 }

@@ -21,24 +21,55 @@ export class CampaignController {
   // Create new campaign with multiple YouTubers
   static async createCampaign(req: Request, res: Response) {
     try {
-      const { videoUrl, requiredViews, budget, name } = req.body;
-      const companyId = req.user?.companyId;
+      const { 
+        name, 
+        description, 
+        budget, 
+        targetViews,
+        selectedYoutubers,
+        companyId
+      } = req.body;
+      
       
       if (!companyId) {
         throw new ApiError(400, 'Company ID is required');
       }
 
-      const campaign = await CompanyService.createCampaignAndUploadVideos({
-        companyId,
-        videoUrl,
-        requiredViews: Number(requiredViews),
+      // Validate selected youtubers
+      if (!selectedYoutubers || !Array.isArray(selectedYoutubers)) {
+        throw new ApiError(400, 'Selected youtubers are required');
+      }
+
+      const campaign = await CampaignService.createCampaign({
+        name,
+        description,
         budget: Number(budget),
-        name
+        targetViews: Number(targetViews),
+        companyId,
+        youtubers: selectedYoutubers.map(y => ({
+          id: y.youtuber.id,
+          playsNeeded: y.playsNeeded,
+          expectedViews: y.expectedViews,
+          cost: y.cost
+        }))
       });
 
-      res.json({ success: true, data: campaign });
+      res.json({ 
+        success: true, 
+        data: campaign 
+      });
     } catch (error) {
-      res.status(500).json({ success: false, error: 'Failed to create campaign' });
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ 
+          success: false, 
+          error: error.message 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create campaign' 
+        });
+      }
     }
   }
 

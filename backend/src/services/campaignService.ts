@@ -4,14 +4,51 @@ import { CPM_RATES } from '../config/constants';
 import { CPMRate } from '../types';
 
 export class CampaignService {
-  static async createCampaign(data: Omit<Campaign, 'id'> & { youtuberIds?: string[] }) {
-    return prisma.campaign.create({
-      data: {
-        ...data,
-        youtubers: {
-          connect: data.youtuberIds?.map(id => ({ id }))
-        }
-      }
+  static async createCampaign(data: {
+    name: string;
+    description?: string;
+    budget: number;
+    targetViews: number;
+    companyId: string;
+    youtubers: Array<{
+      id: string;
+      playsNeeded: number;
+      expectedViews: number;
+      cost: number;
+    }>;
+  }) {
+    return prisma.$transaction(async (prisma) => {
+      // Create the campaign first
+      const campaign = await prisma.campaign.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          budget: data.budget,
+          targetViews: data.targetViews,
+          companyId: data.companyId,
+          youtubers: {
+            connect: data.youtubers.map(y => ({ id: y.id }))
+          }
+        },
+      });
+
+      // Create payment records for each youtuber with their specific playsNeeded
+      await Promise.all(data.youtubers.map(youtuber => 
+        prisma.payment.create({
+          data: {
+            amount: youtuber.cost,
+            companyId: data.companyId,
+            youtuberId: youtuber.id,
+            playsNeeded: youtuber.playsNeeded,
+            status: 'PENDING',
+            earnings: youtuber.cost * 0.7, // 70% for youtuber
+            platformFee: youtuber.cost * 0.3, // 30% platform fee
+            orderId: `order_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          }
+        })
+      ));
+
+      return campaign;
     });
   }
 
