@@ -1,17 +1,17 @@
 import { Request, Response } from 'express';
 import { DonationService } from '../services/donationService';
+import { VideoQueueService } from '../services/VideoQueueService';
+import { ApiError } from '../utils/ApiError';
 
 export class DonationController {
+    // Direct P2P donation to single YouTuber
     static async createDonation(req: Request, res: Response) {
-        const { amount, message, videoUrl, youtuberId, campaignId, scheduledFor } = req.body;
-        const companyId = (req as any).user?.id;
-
         try {
-            if (!amount || !youtuberId || !campaignId) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing required fields: amount, youtuberId, or campaignId'
-                });
+            const { amount, message, videoUrl, youtuberId, campaignId } = req.body;
+            const companyId = req.user?.companyId;
+
+            if (!companyId) {
+                throw new ApiError(400, 'Company ID is required');
             }
 
             const donation = await DonationService.createDonation({
@@ -20,57 +20,29 @@ export class DonationController {
                 videoUrl,
                 companyId,
                 youtuberId,
-                campaignId,
-                scheduledFor: scheduledFor ? new Date(scheduledFor) : undefined
+                campaignId
             });
 
-            return res.status(201).json({
-                success: true,
-                data: donation
+            // Add to YouTuber's queue
+            await VideoQueueService.addToYoutuberQueue(youtuberId, {
+                url: videoUrl,
+                donationId: donation.id
             });
 
-        } catch (error: any) {
-            console.error('Error creating donation:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to create donation',
-                error: error.message
-            });
+            res.json({ success: true, data: donation });
+        } catch (error) {
+            res.status(500).json({ success: false, error: 'Failed to create donation' });
         }
     }
 
+    // Get next donation from queue (for YouTuber's OBS)
     static async getNextDonation(req: Request, res: Response) {
-        const { youtuberId } = req.params;
-
         try {
-            if (!youtuberId) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing youtuberId parameter'
-                });
-            }
-
+            const { youtuberId } = req.params;
             const donation = await DonationService.getNextDonation(youtuberId);
-
-            if (!donation) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'No pending donations'
-                });
-            }
-
-            return res.status(200).json({
-                success: true,
-                data: donation
-            });
-
-        } catch (error: any) {
-            console.error('Error fetching next donation:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to get next donation',
-                error: error.message
-            });
+            res.json({ success: true, data: donation });
+        } catch (error) {
+            res.status(500).json({ success: false, error: 'Failed to fetch donation' });
         }
     }
 

@@ -15,60 +15,60 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company   Company?
-  youtuber  Youtuber?
+  company  Company?
+  youtuber Youtuber?
 }
 
 model Company {
-  id          String   @id @default(uuid())
-  name        String
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-  balance     Float    @default(0)
-  campaigns   Campaign[]
-  donations   Donation[]
-  payments    Payment[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  address     String?
-  country         String?
-  city            String?
-  zip             Int?
+  id        String     @id @default(uuid())
+  name      String
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
+  balance   Float      @default(0)
+  campaigns Campaign[]
+  donations Donation[]
+  payments  Payment[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  address   String?
+  country   String?
+  city      String?
+  zip       Int?
 }
 
 model Youtuber {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  user            User              @relation(fields: [userId], references: [id])
   channelName     String?
-  subscriberCount Int      @default(0)
-  averageViews    Int      @default(0)
-  currentCCV      Int      @default(0)
+  subscriberCount Int               @default(0)
+  averageViews    Int               @default(0)
+  currentCCV      Int               @default(0)
   currentStreamId String?
-  isLive          Boolean  @default(false)
-  earnings        Float    @default(0)
-  MagicNumber     Int      @unique
-  charge          Float    @default(0)
+  isLive          Boolean           @default(false)
+  earnings        Float             @default(0)
+  MagicNumber     Int               @unique
+  charge          Float             @default(0)
   bankName        String?
   accountName     String?
   accountNumber   String?
   ifscCode        String?
   panCard         String?
   upiId           String?
-  bankVerified    Boolean  @default(false)
+  bankVerified    Boolean           @default(false)
   name            String?
-  timeout         Int?     @default(30)  // Default timeout of 30 seconds
+  timeout         Int?              @default(30) // Default timeout of 30 seconds
   channelLink     String[]
   phoneNumber     String?
   alertBoxUrl     String?
-  email           String?   // Add email field
+  email           String? // Add email field
   campaigns       Campaign[]
   donations       Donation[]
   schedules       AdSchedule[]
   analytics       StreamAnalytics[]
   payments        Payment[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   avatar          String?
   description     String?
   address         String?
@@ -79,82 +79,85 @@ model Youtuber {
 }
 
 model Campaign {
-  id           String    @id @default(uuid())
+  id           String         @id @default(uuid())
   name         String
   description  String?
   budget       Float
   targetViews  Int
   status       CampaignStatus @default(ACTIVE)
   companyId    String
-  company      Company   @relation(fields: [companyId], references: [id])
+  company      Company        @relation(fields: [companyId], references: [id])
   youtubers    Youtuber[]
   donations    Donation[]
-  currentViews Int       @default(0)
-  totalRevenue Float     @default(0)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  payments     Payment[] // Add this line to define the reverse relation
+  currentViews Int            @default(0)
+  totalRevenue Float          @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model Donation {
-  id          String    @id @default(uuid())
-  amount      Float
-  message     String?
-  videoUrl    String?
-  status      DonationStatus @default(PENDING)
-  companyId   String
-  company     Company   @relation(fields: [companyId], references: [id])
-  youtuberId  String
-  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
-  campaignId  String
-  campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  id           String         @id @default(uuid())
+  amount       Float
+  message      String?
+  videoUrl     String?
+  status       DonationStatus @default(PENDING)
+  companyId    String
+  company      Company        @relation(fields: [companyId], references: [id])
+  youtuberId   String
+  youtuber     Youtuber       @relation(fields: [youtuberId], references: [id])
+  campaignId   String
+  campaign     Campaign       @relation(fields: [campaignId], references: [id])
   scheduledFor DateTime?
-  playedAt    DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  playedAt     DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model AdSchedule {
-  id          String    @id @default(uuid())
-  youtuberId  String
-  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
-  startTime   DateTime
-  endTime     DateTime
+  id            String   @id @default(uuid())
+  youtuberId    String
+  youtuber      Youtuber @relation(fields: [youtuberId], references: [id])
+  startTime     DateTime
+  endTime       DateTime
   maxAdsPerHour Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
 }
 
 model StreamAnalytics {
-  id          String    @id @default(uuid())
-  youtuberId  String
-  youtuber    Youtuber  @relation(fields: [youtuberId], references: [id])
-  streamId    String
-  averageCCV  Int
-  peakCCV     Int
-  totalViews  Int       @default(0)
-  adsPlayed   Int
-  revenue     Float
-  timestamp   DateTime
-  createdAt   DateTime  @default(now())
+  id         String   @id @default(uuid())
+  youtuberId String
+  youtuber   Youtuber @relation(fields: [youtuberId], references: [id])
+  streamId   String
+  averageCCV Int
+  peakCCV    Int
+  totalViews Int      @default(0)
+  adsPlayed  Int
+  revenue    Float
+  timestamp  DateTime
+  createdAt  DateTime @default(now())
 }
 
 model Payment {
-  id            String    @id @default(uuid())
+  id            String        @id @default(uuid())
   amount        Float
   status        PaymentStatus @default(PENDING)
-  orderId       String    @unique
+  orderId       String        @unique
   paymentId     String?
-  payoutId     String?
-  transactionId String?   // For payment gateway reference
-  playsNeeded   Int       @default(1)
-  earnings      Float     // YouTuber's earnings (after platform fee)
-  platformFee   Float     // Platform's commission
+  payoutId      String?
+  transactionId String? // For payment gateway reference
+  playsNeeded   Int           @default(1)
+  earnings      Float // YouTuber's earnings (after platform fee)
+  platformFee   Float // Platform's commission
   companyId     String
-  company       Company   @relation(fields: [companyId], references: [id])
+  company       Company       @relation(fields: [companyId], references: [id])
   youtuberId    String
-  youtuber      Youtuber @relation(fields: [youtuberId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  youtuber      Youtuber      @relation(fields: [youtuberId], references: [id])
+  campaignId    String? // Make it optional
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
 }
 
 enum Role {

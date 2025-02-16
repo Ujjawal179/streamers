@@ -6,6 +6,7 @@ import prisma from '../db/db';
 import { CompanyService } from '../services/companyService';
 import { PaymentService } from '../services/paymentService';
 import { PaymentStatus } from '@prisma/client';
+import { ApiError } from '../utils/ApiError';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
@@ -15,18 +16,29 @@ const razorpay = new Razorpay({
 export class PaymentController {
   static async createPayment(req: Request, res: Response) {
     try {
-      const { amount, youtuberId, playsNeeded, companyId } = req.body;
+      if (!req.user?.companyId) {
+        throw new ApiError(401, 'Company authentication required');
+      }
+
+      const { amount, youtuberId, playsNeeded } = req.body;
+      if (!amount || !youtuberId) {
+        throw new ApiError(400, 'Amount and YouTuber ID are required');
+      }
 
       const payment = await PaymentService.createPayment({
-        amount,
-        companyId,
+        amount: Number(amount),
+        companyId: req.user.companyId,
         youtuberId,
-        playsNeeded
+        playsNeeded: Number(playsNeeded) || 1
       });
 
-      res.json(payment);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.json({ success: true, data: payment });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ success: false, error: error.message });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to create payment' });
+      }
     }
   }
 
@@ -141,11 +153,11 @@ export const createPaymentOrderForCampaign = async (req: Request, res: Response)
 
     // Create individual payments for each YouTuber
     const payments = await Promise.all(
-      youtubers.youtubers.map(youtuber => 
+      youtubers.youtubers.filter(youtuber => youtuber.id).map(youtuber => 
         prisma.payment.create({
           data: {
             companyId,
-            youtuberId: youtuber.id,
+            youtuberId: youtuber.id!,
             amount: youtuber.charge || 0,
             orderId: order.id,
             earnings: 0,
@@ -304,14 +316,29 @@ export const verifyPayment = async (req: Request, res: Response) => {
     }
 
     // Handle video upload if payment is successful
-    if (videoData && payment.playsNeeded > 1) {
-      await CompanyService.uploadVideoToYoutuberWithPlays(
-        payment.youtuberId,
-        videoData,
-        payment.playsNeeded
-      );
-    } else if (videoData) {
-      await CompanyService.uploadVideoToYoutuber(payment.youtuberId, videoData);
+    try {
+      if (videoData && payment.playsNeeded > 1) {
+        await CompanyService.uploadVideoToYoutuberWithPlays(
+          payment.youtuberId,
+          {
+            url: videoData.url,
+            paymentId: payment.id,
+            // Include other optional fields if available
+            ...videoData
+          },
+          payment.playsNeeded
+        );
+      } else if (videoData) {
+        await CompanyService.uploadVideoToYoutuber(payment.youtuberId, {
+          url: videoData.url,
+          paymentId: payment.id,
+          // Include other optional fields if available
+          ...videoData
+        });
+      }
+    } catch (error) {
+      console.error('Video upload error:', error);
+      throw new Error('Failed to upload video after payment');
     }
 
     res.json({
