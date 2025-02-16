@@ -1,15 +1,18 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
+import { CompanyController } from '../controllers/companyController';
+import { authenticateCompany } from '../middleware/auth';
+
 const router = Router();
 
-import { CompanyController } from '../controllers/companyController';
+// Campaign routes
+router.post('/campaign/calculate', authenticateCompany, CompanyController.calculateCampaign);
+router.post('/campaign/create', authenticateCompany, CompanyController.createCampaign);
+router.post('/campaign/:id/upload', authenticateCompany, CompanyController.uploadVideoCampaign);
 
-router.post('/campaigns', auth, CompanyController.createCampaign);
-router.put('/:id', auth, CompanyController.updateCompany);
-router.get('/:id/campaigns', auth, CompanyController.getCompanyCampaigns);
-router.put('/campaigns/:id', auth, CompanyController.updateCampaign);
-router.post('/videos', auth, CompanyController.uploadVideo);
-router.get('/youtubers', auth, CompanyController.getYoutubers);
-router.delete('/:id', auth, CompanyController.deleteCompany);
+// P2P routes
+router.post('/direct/:youtuberId/upload', authenticateCompany, CompanyController.uploadVideoDirectToYoutuber);
+
+// Youtuber discovery
+router.get('/youtubers', authenticateCompany, CompanyController.getYoutubers);
 
 export default router;

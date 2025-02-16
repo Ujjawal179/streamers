@@ -205,4 +205,114 @@ export class CompanyService {
 
     // ...rest of the code
   }
+
+  static async calculateCampaignYoutubers(requiredViews: number, budget: number) {
+    // Get all active YouTubers with their charges
+    const youtubers = await prisma.youtuber.findMany({
+      where: {
+        isLive: true,
+        charge: { gt: 0 }
+      },
+      orderBy: { charge: 'asc' }
+    });
+
+    let remainingViews = requiredViews;
+    let totalCost = 0;
+    const selectedYoutubers = [];
+
+    for (const youtuber of youtubers) {
+      if (remainingViews <= 0 || totalCost >= budget) break;
+
+      const viewsPerPlay = youtuber.currentCCV || 0;
+      if (viewsPerPlay <= 0) continue;
+
+      // Calculate optimal plays needed
+      const maxPlaysForBudget = Math.floor((budget - totalCost) / youtuber.charge);
+      const playsNeededForViews = Math.ceil(Math.min(remainingViews, viewsPerPlay * 3) / viewsPerPlay);
+      const playsNeeded = Math.min(maxPlaysForBudget, playsNeededForViews);
+
+      const cost = playsNeeded * youtuber.charge;
+      const expectedViews = playsNeeded * viewsPerPlay;
+
+      selectedYoutubers.push({
+        youtuber,
+        playsNeeded,
+        expectedViews,
+        cost
+      });
+
+      remainingViews -= expectedViews;
+      totalCost += cost;
+    }
+
+    return {
+      youtubers: selectedYoutubers,
+      totalCost,
+      remainingViews,
+      achievableViews: requiredViews - remainingViews
+    };
+  }
+
+  static async createCampaignAndUploadVideos(
+    companyId: string,
+    videoUrl: string,
+    requiredViews: number,
+    budget: number,
+    name: string
+  ) {
+    const campaign = await this.calculateCampaignYoutubers(requiredViews, budget);
+
+    if (campaign.youtubers.length === 0) {
+      throw new Error('No suitable YouTubers found for the campaign');
+    }
+
+    // Create campaign record
+    const campaignRecord = await prisma.campaign.create({
+      data: {
+        companyId,
+        name,
+        budget,
+        targetViews: requiredViews,
+        status: 'ACTIVE'
+      }
+    });
+
+    // Process each YouTuber
+    const results = await Promise.all(
+      campaign.youtubers.map(async ({ youtuber, playsNeeded, cost }) => {
+        // Create payment record
+        const payment = await prisma.payment.create({
+          data: {
+            companyId,
+            youtuberId: youtuber.id,
+            campaignId: campaignRecord.id,
+            amount: cost,
+            playsNeeded,
+            status: 'PENDING'
+          }
+        });
+
+        // Add video to YouTuber's queue multiple times based on playsNeeded
+        const queueKey = `youtuber:${youtuber.id}:videos`;
+        for (let i = 0; i < playsNeeded; i++) {
+          await addToQueue(queueKey, {
+            url: videoUrl,
+            playNumber: i + 1,
+            totalPlays: playsNeeded,
+            campaignId: campaignRecord.id,
+            paymentId: payment.id
+          });
+        }
+
+        return { youtuberId: youtuber.id, payment, playsNeeded };
+      })
+    );
+
+    return {
+      campaign: campaignRecord,
+      results,
+      totalCost: campaign.totalCost,
+      expectedViews: campaign.achievableViews
+    };
+  }
 }

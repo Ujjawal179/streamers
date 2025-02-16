@@ -173,22 +173,27 @@ export class CompanyController {
   }
 
   static async createCampaign(req: Request, res: Response) {
-    const { companyId, name, description, goal } = req.body;
+    const { videoUrl, requiredViews, budget, name } = req.body;
+    const { companyId } = req.params;
 
     try {
-      const campaign = await prisma.campaign.create({
-        data: {
-          companyId,
-          name,
-          description,
-          budget: req.body.budget,
-          targetViews: req.body.targetViews,
-          company: { connect: { id: companyId } },
-        },
+      const result = await CompanyService.createCampaignAndUploadVideos(
+        companyId,
+        videoUrl,
+        Number(requiredViews),
+        Number(budget),
+        name
+      );
+
+      res.json({
+        success: true,
+        data: result
       });
-      res.status(201).json(campaign);
     } catch (error) {
-      res.status(500).json({ message: 'Failed to create campaign' });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create campaign'
+      });
     }
   }
 
@@ -334,6 +339,27 @@ export class CompanyController {
       return res.status(500).json({
         success: false,
         error: 'Failed to delete company data'
+      });
+    }
+  }
+
+  static async calculateCampaign(req: Request, res: Response) {
+    const { requiredViews, budget } = req.body;
+
+    try {
+      const campaign = await CompanyService.calculateCampaignYoutubers(
+        Number(requiredViews),
+        Number(budget)
+      );
+
+      res.json({
+        success: true,
+        data: campaign
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate campaign'
       });
     }
   }
