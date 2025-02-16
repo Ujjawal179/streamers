@@ -32,7 +32,9 @@ export class P2PService {
         status: 'PENDING',
         paymentId: `pay_${Date.now()}`,
         orderId: `order_${Date.now()}`,
-        playsNeeded: 1
+        playsNeeded: 1,
+        earnings: 0,
+        platformFee: 0
       }
     });
 

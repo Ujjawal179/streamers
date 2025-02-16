@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
-const router = Router();
-
 import { CampaignController } from '../controllers/campaignController';
 
-router.get('/', auth, CampaignController.getAllCampaigns);
-router.get('/:id', auth, CampaignController.getCampaign);
-router.put('/:id', auth, CampaignController.updateCampaign);
-router.delete('/:id', auth, CampaignController.deleteCampaign);
-router.post('/', auth, CampaignController.createCampaign);
-router.get('/company/:companyId', auth, CampaignController.getCampaigns);
+const router = Router();
+
+router.post('/calculate', CampaignController.calculateCampaign);
+router.post('/create', CampaignController.createCampaign);
+router.get('/', CampaignController.getCampaigns);
+router.get('/:id', CampaignController.getCampaign);
+router.get('/:id/analytics', CampaignController.getCampaignAnalytics);
+router.patch('/:id', CampaignController.updateCampaign);
+router.delete('/:id', CampaignController.deleteCampaign);
 
 export default router;

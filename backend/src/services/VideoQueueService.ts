@@ -6,7 +6,8 @@ export class VideoQueueService {
     const key = `youtuber:${youtuberId}:videos`;
     return addToQueue(key, {
       ...video,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      playsNeeded: video.playsNeeded || 1 // Set default to 1 if not provided
     }, scheduledTime);
   }
 
@@ -36,5 +37,10 @@ export class VideoQueueService {
     const key = `youtuber:${youtuberId}:videos`;
     const client = await getRedisClient();
     await client.del(key);
+  }
+
+  static async getQueueLength(youtuberId: string): Promise<number> {
+    const key = `youtuber:${youtuberId}:videos`;
+    return getQueueLength(key);
   }
 }

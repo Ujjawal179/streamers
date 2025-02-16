@@ -7,4 +7,7 @@ export interface IVideoUpload {
   totalPlays?: number;
   campaignId?: string;
   paymentId?: string;
+  uploadedAt?: string;
+  playsNeeded?: number;
+  donationId?: string; // Make this optional
 }
