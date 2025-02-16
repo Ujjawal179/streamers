@@ -1,21 +1,14 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
-import { CompanyController } from '../controllers/companyController';
-import { getCloudinarySignature } from '../controllers/userController';
+import { authenticateCompany } from '../middleware/auth';
+import { VideoController } from '../controllers/videoController';
+import { getCloudinarySignature } from '../utils/cloudinary';
 
 const router = Router();
 
-// Campaign-based video uploads
-router.post('/campaign/:companyId', auth, CompanyController.uploadVideoCampaign);
-// Direct video uploads to specific YouTuber
-router.post('/direct/:youtuberId', auth, CompanyController.uploadVideoDirectToYoutuber);
-// Get next video from YouTuber's queue
-router.get('/queue/:youtuberId/next', auth, CompanyController.getNextVideoInQueue);
-// Get video by ID
-
-router.get('/video/:youtuberId/:pin', CompanyController.getVideo);
-
-// Generate signature for Cloudinary upload
-router.get('/get-signature',auth, getCloudinarySignature);
+router.post('/campaign/:companyId', authenticateCompany, VideoController.uploadCampaignVideo);
+router.post('/direct/:youtuberId', authenticateCompany, VideoController.uploadDirectVideo);
+router.get('/queue/:youtuberId/next', authenticateCompany, VideoController.getNextVideo);
+router.get('/video/:youtuberId/:pin', VideoController.getVideoByPin);
+router.get('/get-signature', authenticateCompany, getCloudinarySignature);
 
 export default router;

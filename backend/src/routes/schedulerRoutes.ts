@@ -1,42 +1,19 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
+import { authenticateYoutuber, AuthenticatedRequest } from '../middleware/auth';
 import { SchedulerController } from '../controllers/schedulerController';
-import { scheduleAuth } from '../middleware/scheduleAuth';
+import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
 
-// Schedule management routes with full authentication
-router.post('/:youtuberId/schedule', 
-  auth, 
-  scheduleAuth.verifyYoutuberStatus,
-  scheduleAuth.validateScheduleTime,
-  SchedulerController.createSchedule
-);
+// Type-safe handler wrapper
+const handler = (fn: (req: AuthenticatedRequest, res: Response) => Promise<any>) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        fn(req as AuthenticatedRequest, res).catch(next);
+    };
+};
 
-router.get('/:youtuberId/schedule', 
-  auth, 
-  SchedulerController.getYoutuberSchedule
-);
+router.post('/schedule', authenticateYoutuber, handler(SchedulerController.createSchedule));
+router.patch('/schedule/:id', authenticateYoutuber, handler(SchedulerController.updateSchedule));
+router.delete('/schedule/:id', authenticateYoutuber, handler(SchedulerController.deleteSchedule));
 
-router.put('/schedule/:scheduleId', 
-  auth, 
-  scheduleAuth.verifyScheduleOwnership,
-  scheduleAuth.validateScheduleTime,
-  SchedulerController.updateSchedule
-);
-
-router.delete('/schedule/:scheduleId', 
-  auth, 
-  scheduleAuth.verifyScheduleOwnership,
-  SchedulerController.deleteSchedule
-);
-
-router.post('/:youtuberId/check-conflicts', auth, SchedulerController.checkScheduleConflicts);
-
-// Queue and donation scheduling routes
-router.get('/:youtuberId/queue', auth, SchedulerController.getQueueStatus);
-router.post('/donations/:donationId/schedule', auth, SchedulerController.scheduleDonation);
-router.get('/:youtuberId/available-slots', auth, SchedulerController.getAvailableSlots);
-
-// Add the router to the main routes file
 export default router;

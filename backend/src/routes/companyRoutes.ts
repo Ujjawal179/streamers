@@ -1,27 +1,20 @@
 import { Router } from 'express';
-import { CompanyController } from '../controllers/companyController';
-import { CampaignController } from '../controllers/campaignController';
 import { authenticateCompany } from '../middleware/auth';
+import { CompanyController } from '../controllers/companyController';
 import campaignRoutes from './campaignRoutes';
 
 const router = Router();
 
 // Company profile routes
-router.get('/profile', authenticateCompany, CompanyController.getYoutubers);
-router.patch('/profile', authenticateCompany, CompanyController.updateCompany);
-router.delete('/profile', authenticateCompany, CompanyController.deleteCompany);
+router.use(authenticateCompany); // Apply to all routes
 
-// Direct P2P video upload
-router.post(
-  '/video/:youtuberId', 
-  authenticateCompany, 
-  CompanyController.uploadVideoToYoutuber
-);
+router.get('/profile', CompanyController.getYoutubers);
+router.patch('/profile', CompanyController.updateCompany);
+router.delete('/profile', CompanyController.deleteCompany);
+router.post('/video/:youtuberId', CompanyController.uploadVideoToYoutuber);
+router.get('/youtubers', CompanyController.getYoutubers);
 
-// YouTuber discovery
-router.get('/youtubers', authenticateCompany, CompanyController.getYoutubers);
-
-// Campaign routes should be in CampaignController
-router.use('/campaigns', authenticateCompany, campaignRoutes);
+// Campaign routes
+router.use('/campaigns', campaignRoutes);
 
 export default router;
