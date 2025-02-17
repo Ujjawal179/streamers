@@ -109,13 +109,13 @@ export class YoutuberService {
     let costPerView: number;
 
     if (averageViews < 10000) {
-      costPerView = 1.25;  // Higher cost for smaller campaigns
-    } else if (averageViews < 50000) {
-      costPerView = 1.10; // Medium-scale discount
-    } else if (averageViews < 100000) {
-      costPerView = 0.95; // Large-scale discount
-    } else {
-      costPerView = 0.89; // Bulk discount for massive campaigns
+      costPerView = 0.9;  // Higher cost for smaller campaigns
+        } else if (averageViews < 50000) {
+      costPerView = 0.85; // Medium-scale discount
+        } else if (averageViews < 100000) {
+      costPerView = 0.80; // Large-scale discount
+        } else {
+      costPerView = 0.75; // Bulk discount for massive campaigns
     }
 
     return averageViews * costPerView;

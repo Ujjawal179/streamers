@@ -37,7 +37,8 @@ export const authenticateCompany = async (req: Request, res: Response, next: Nex
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
-    if (decoded.userType !== 'COMPANY') {
+    console.log(decoded);
+    if (decoded.userType.toUpperCase( ) !== 'COMPANY') {
       return res.status(403).json({ error: 'Company access required' });
     }
 
@@ -68,7 +69,7 @@ export const authenticateYoutuber = async (req: Request, res: Response, next: Ne
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
-    if (decoded.userType !== 'YOUTUBER') {
+    if (decoded.userType.toUpperCase( ) !== 'YOUTUBER') {
       return res.status(403).json({ error: 'Youtuber access required' });
     }
 

@@ -169,11 +169,7 @@ export const login = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      user: {
-        ...user,
-        password: undefined,
-        profile: userType === 'company' ? user.company : user.youtuber
-      },
+      user: userType === 'company' ? user.company : user.youtuber,
       userType,
       token
     });

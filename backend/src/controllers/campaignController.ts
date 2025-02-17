@@ -73,6 +73,58 @@ export class CampaignController {
     }
   }
 
+  
+  static async createYoutuberCampaign(req: Request, res: Response) {
+    try {
+      const { name, companyId, youtuberId, description, playsNeeded, brandLink } = req.body;
+      console.log(name, companyId, youtuberId, description, playsNeeded, brandLink);
+      
+      
+      if (!companyId) {
+        throw new ApiError(400, 'Company ID is required');
+      }
+
+      if (!youtuberId) {
+        throw new ApiError(400, 'YouTuber ID is required');
+      }
+
+      // Validate playsNeeded
+      const plays = Number(playsNeeded);
+      if (isNaN(plays) || plays < 1) {
+        throw new ApiError(400, 'playsNeeded must be greater than 0');
+      }
+
+      const campaign = await CampaignService.createSingleYoutuberCampaign({
+        name,
+        description,
+        companyId,
+        youtuberId,
+        playsNeeded: plays,
+        brandLink
+      });
+
+      res.json({ 
+        success: true, 
+        data: campaign 
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ 
+          success: false, 
+          error: error.message 
+        });
+      } else {
+        console.error('Campaign creation error:', error);
+        res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create campaign' 
+        });
+      }
+    }
+  }
+
+  
+
   static async getCampaigns(req: Request, res: Response) {
     const companyId = (req as any).user?.id;
 

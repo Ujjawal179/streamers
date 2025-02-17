@@ -81,7 +81,7 @@ export class CompanyService {
         VideoQueueService.addToYoutuberQueue(youtuberId, {
           ...videoData,
           playNumber: 1,
-          totalPlays: 1
+          totalPlays: playsNeeded
         })
       )
     );
@@ -262,7 +262,7 @@ export class CompanyService {
     return VideoQueueService.addToYoutuberQueue(youtuberId, {
       ...videoData,
       playNumber: 1,
-      totalPlays: 1
+      totalPlays: videoData.totalPlays || videoData.playsNeeded || 1
     });
   }
 }

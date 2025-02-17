@@ -179,8 +179,12 @@ export const verifyPayment = async (req: Request, res: Response) => {
   const { orderId, paymentId, signature, videoData } = req.body;
 
   try {
-    const payment = await prisma.payment.findUnique({
-      where: { orderId },
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' });
+    }
+
+    const payment = await prisma.payment.findUniqueOrThrow({
+      where: { orderId: orderId },
       include: {
         youtuber: {
           include: {

@@ -7,19 +7,34 @@ export class YoutuberController {
   static async updateYoutuber(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const updateData = req.body;
+
       if (!id) {
         return res.status(400).json({
           success: false,
           error: 'No id provided'
         });
       }
-      if (req.body.avgViews !== undefined) {
-        req.body.charge = YoutuberService.calculateYouTubeAdCost(req.body.avgViews);
+
+      // Convert numeric fields to numbers
+      if (updateData.averageViews !== undefined) {
+        updateData.averageViews = Number(updateData.averageViews);
+        // Calculate and set charge based on average views
+        updateData.charge = YoutuberService.calculateYouTubeAdCost(updateData.averageViews);
       }
+      if (updateData.timeout !== undefined) {
+        updateData.timeout = Number(updateData.timeout);
+      }
+      if (updateData.charge !== undefined) {
+        updateData.charge = Number(updateData.charge);
+      }
+
+      // Perform the update with all provided data
       const youtuber = await prisma.youtuber.update({
         where: { id },
-        data: req.body
+        data: updateData
       });
+
       return res.status(200).json({
         success: true,
         data: youtuber
@@ -80,13 +95,12 @@ export class YoutuberController {
         select: {
           id: true,
           name: true,
-          email: true,
           channelLink: true,
-          phoneNumber: true,
           timeout: true,
           charge: true,
           isLive: true,
-          alertBoxUrl: true
+          alertBoxUrl: true,
+          averageViews: true,
         }
       });
 

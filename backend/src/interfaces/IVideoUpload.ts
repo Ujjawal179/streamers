@@ -10,4 +10,5 @@ export interface IVideoUpload {
   uploadedAt?: string;
   playsNeeded?: number;
   donationId?: string; // Make this optional
+  brandLink?: string;  // Add this field
 }

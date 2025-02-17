@@ -3,14 +3,23 @@ import crypto from 'crypto';
 
 export const getCloudinarySignature = (req: Request, res: Response) => {
   try {
-    const timestamp = Math.round(new Date().getTime() / 1000);
+    const { CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY } = process.env;
+
+    if (!CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY) {
+      return res.status(500).json({ error: 'Missing Cloudinary API credentials' });
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     const folder = 'uploads';
     const uploadPreset = 'ml_default';
-    
+
+    // Include all parameters (alphabetically sorted) that you're sending with the request.
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}&upload_preset=${uploadPreset}`;
+
+    // Generate signature using SHA-1.
     const signature = crypto
-      .createHmac('sha256', process.env.CLOUDINARY_API_SECRET || '')
-      .update(paramsToSign)
+      .createHash('sha1')
+      .update(paramsToSign + CLOUDINARY_API_SECRET)
       .digest('hex');
 
     res.json({
@@ -18,10 +27,11 @@ export const getCloudinarySignature = (req: Request, res: Response) => {
       timestamp,
       folder,
       uploadPreset,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY
+      cloudName: CLOUDINARY_CLOUD_NAME,
+      apiKey: CLOUDINARY_API_KEY
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate signature' });
+    console.error('Error generating Cloudinary signature:', error);
+    return res.status(500).json({ error: 'Failed to generate signature' });
   }
 };
