@@ -85,6 +85,7 @@ model Campaign {
   budget       Float
   targetViews  Int
   status       CampaignStatus @default(ACTIVE)
+  brandLink    String?        // Add this field
   companyId    String
   company      Company        @relation(fields: [companyId], references: [id])
   youtubers    Youtuber[]
@@ -93,7 +94,7 @@ model Campaign {
   currentViews Int            @default(0)
   totalRevenue Float          @default(0)
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  updatedAt    DateTime       @default(now())
 }
 
 model Donation {
@@ -111,7 +112,7 @@ model Donation {
   scheduledFor DateTime?
   playedAt     DateTime?
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  updatedAt    DateTime       @default(now())
 }
 
 model AdSchedule {
