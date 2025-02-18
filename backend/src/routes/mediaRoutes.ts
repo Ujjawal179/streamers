@@ -10,5 +10,7 @@ router.post('/direct/:youtuberId', authenticateCompany, VideoController.uploadDi
 router.get('/queue/:youtuberId/next', authenticateCompany, VideoController.getNextVideo);
 router.get('/video/:youtuberId/:pin', VideoController.getVideoByPin);
 router.get('/get-signature', authenticateCompany, getCloudinarySignature);
+router.get('/length/:youtuberId',  VideoController.getQueueLength);
+
 
 export default router;

@@ -49,7 +49,7 @@ export class CampaignService {
       });
 
       // Create payment records for each youtuber with their specific playsNeeded
-      await Promise.all(data.youtubers.map(youtuber => 
+      const payment = await Promise.all(data.youtubers.map(youtuber => 
         prisma.payment.create({
           data: {
             amount: youtuber.cost,
@@ -64,7 +64,7 @@ export class CampaignService {
         })
       ));
 
-      return campaign;
+      return { campaign, payment };
     });
   }
 

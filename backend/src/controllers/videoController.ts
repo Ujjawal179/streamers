@@ -44,4 +44,15 @@ export class VideoController {
       res.status(500).json({ success: false, error: 'Failed to get video' });
     }
   }
+
+  static async getQueueLength(req: Request, res: Response) {
+    try {
+      const { youtuberId } = req.params;
+      const length = await VideoQueueService.getQueueLength(youtuberId);
+      console.log(youtuberId, length)
+      res.json({ success: true, data: length });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to get queue length' });
+    }
+  }
 }
