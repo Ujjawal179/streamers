@@ -55,4 +55,29 @@ export class VideoController {
       res.status(500).json({ success: false, error: 'Failed to get queue length' });
     }
   }
+
+  static async removeCurrentVideo(req: Request, res: Response) {
+    try {
+      const { youtuberId } = req.params;
+      const removedVideo = await VideoQueueService.removeCurrentVideo(youtuberId);
+      
+      if (!removedVideo) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'No video found in queue' 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Video removed successfully',
+        data: removedVideo
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to remove video from queue' 
+      });
+    }
+  }
 }

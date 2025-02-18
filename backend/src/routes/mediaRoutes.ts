@@ -11,6 +11,6 @@ router.get('/queue/:youtuberId/next', authenticateCompany, VideoController.getNe
 router.get('/video/:youtuberId/:pin', VideoController.getVideoByPin);
 router.get('/get-signature', authenticateCompany, getCloudinarySignature);
 router.get('/length/:youtuberId',  VideoController.getQueueLength);
-
+router.delete('/video/:youtuberId', authenticateCompany, VideoController.removeCurrentVideo);
 
 export default router;

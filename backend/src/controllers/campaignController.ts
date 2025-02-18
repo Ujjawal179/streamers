@@ -27,9 +27,13 @@ export class CampaignController {
         budget, 
         targetViews,
         selectedYoutubers,
-        companyId
+        companyId,
+        videoUrl
       } = req.body;
       
+      if (!videoUrl) {
+        throw new ApiError(400, 'Video URL is required');
+      }
       
       if (!companyId) {
         throw new ApiError(400, 'Company ID is required');
@@ -40,24 +44,17 @@ export class CampaignController {
         throw new ApiError(400, 'Selected youtubers are required');
       }
 
-      const campaign = await CampaignService.createCampaign({
+      const result = await CampaignService.createCampaignWithVideo({
         name,
         description,
         budget: Number(budget),
         targetViews: Number(targetViews),
         companyId,
-        youtubers: selectedYoutubers.map(y => ({
-          id: y.youtuber.id,
-          playsNeeded: y.playsNeeded,
-          expectedViews: y.expectedViews,
-          cost: y.cost
-        }))
+        videoUrl,
+        youtubers: selectedYoutubers
       });
 
-      res.json({ 
-        success: true, 
-        data: campaign 
-      });
+      res.json({ success: true, data: result });
     } catch (error) {
       if (error instanceof ApiError) {
         res.status(error.statusCode).json({ 
@@ -73,57 +70,36 @@ export class CampaignController {
     }
   }
 
-  
-  static async createYoutuberCampaign(req: Request, res: Response) {
+  static async createSingleYoutuberCampaign(req: Request, res: Response) {
     try {
-      const { name, companyId, youtuberId, description, playsNeeded, brandLink } = req.body;
-      console.log(name, companyId, youtuberId, description, playsNeeded, brandLink);
-      
-      
-      if (!companyId) {
-        throw new ApiError(400, 'Company ID is required');
+      const { 
+        name, description, youtuberId, videoUrl,
+        playsNeeded, companyId, brandLink 
+      } = req.body;
+
+      if (!videoUrl || !youtuberId) {
+        throw new ApiError(400, 'Video URL and YouTuber ID are required');
       }
 
-      if (!youtuberId) {
-        throw new ApiError(400, 'YouTuber ID is required');
-      }
-
-      // Validate playsNeeded
-      const plays = Number(playsNeeded);
-      if (isNaN(plays) || plays < 1) {
-        throw new ApiError(400, 'playsNeeded must be greater than 0');
-      }
-
-      const campaign = await CampaignService.createSingleYoutuberCampaign({
+      const result = await CampaignService.createSingleYoutuberCampaign({
         name,
+        youtuberId,
         description,
         companyId,
-        youtuberId,
-        playsNeeded: plays,
-        brandLink
+        playsNeeded: Number(playsNeeded),
+        brandLink,
+        videoUrl // Now this matches the interface
       });
 
-      res.json({ 
-        success: true, 
-        data: campaign 
-      });
+      res.json({ success: true, data: result });
     } catch (error) {
       if (error instanceof ApiError) {
-        res.status(error.statusCode).json({ 
-          success: false, 
-          error: error.message 
-        });
+        res.status(error.statusCode).json({ success: false, error: error.message });
       } else {
-        console.error('Campaign creation error:', error);
-        res.status(500).json({ 
-          success: false, 
-          error: 'Failed to create campaign' 
-        });
+        res.status(500).json({ success: false, error: 'Failed to create campaign' });
       }
     }
   }
-
-  
 
   static async getCampaigns(req: Request, res: Response) {
     const companyId = (req as any).user?.id;

@@ -10,6 +10,6 @@ router.get('/:id', CampaignController.getCampaign);
 router.get('/:id/analytics', CampaignController.getCampaignAnalytics);
 router.patch('/:id', CampaignController.updateCampaign);
 router.delete('/:id', CampaignController.deleteCampaign);
-router.post('/youtuber', CampaignController.createYoutuberCampaign);
+router.post('/single-youtuber', CampaignController.createSingleYoutuberCampaign);  // Updated route name
 
 export default router;

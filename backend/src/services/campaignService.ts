@@ -4,20 +4,15 @@ import { CPM_RATES } from '../config/constants';
 import { CPMRate } from '../types';
 import { ApiError } from '../utils/ApiError';
 import Razorpay from 'razorpay';
+import { VideoQueueService } from './VideoQueueService';
+import  {SingleYoutuberCampaignInput } from '../interfaces/ICampaign';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
   key_secret: process.env.RAZORPAY_KEY_SECRET || ''
 });
 
-interface SingleYoutuberCampaignInput {
-  youtuberId: string;
-  name: string;
-  description: string;
-  companyId: string;
-  brandLink: string;
-  playsNeeded: number;
-}
+
 
 export class CampaignService {
   static async createCampaign(data: {
@@ -184,13 +179,78 @@ export class CampaignService {
     };
   }
 
+  static async createCampaignWithVideo(input: {
+    name: string;
+    description?: string;
+    budget: number;
+    targetViews: number;
+    companyId: string;
+    videoUrl: string;
+    youtubers: Array<{
+      id: string;
+      playsNeeded: number;
+      expectedViews: number;
+      cost: number;
+    }>;
+  }) {
+    return prisma.$transaction(async (prisma) => {
+      // 1. Create campaign record
+      const campaign = await prisma.campaign.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          budget: input.budget,
+          targetViews: input.targetViews,
+          companyId: input.companyId,
+          status: 'ACTIVE',
+          youtubers: {
+            connect: input.youtubers.map(y => ({ id: y.id }))
+          }
+        }
+      });
 
-  
+      // 2. Create payment records and queue videos for each YouTuber
+      const results = await Promise.all(
+        input.youtubers.map(async (youtuber) => {
+          // Create payment
+          const payment = await prisma.payment.create({
+            data: {
+              amount: youtuber.cost,
+              companyId: input.companyId,
+              youtuberId: youtuber.id,
+              campaignId: campaign.id,
+              playsNeeded: youtuber.playsNeeded,
+              status: 'PENDING',
+              earnings: youtuber.cost * 0.7,
+              platformFee: youtuber.cost * 0.3,
+              orderId: `order_${Date.now()}_${youtuber.id}`
+            }
+          });
+
+          // Queue video for each required play
+          await VideoQueueService.uploadVideoToYoutuberWithPlays(
+            youtuber.id,
+            {
+              url: input.videoUrl,
+              campaignId: campaign.id,
+              paymentId: payment.id
+            },
+            youtuber.playsNeeded
+          );
+
+          return { youtuberId: youtuber.id, payment, playsNeeded: youtuber.playsNeeded };
+        })
+      );
+
+      return { campaign, results };
+    });
+  }
+
   static async createSingleYoutuberCampaign(input: SingleYoutuberCampaignInput) {
     if (!input.youtuberId) {
       throw new ApiError(400, 'YouTuber ID is required');
     }
-  
+
     const youtuber = await prisma.youtuber.findUnique({
       where: { id: input.youtuberId },
       select: {
@@ -200,58 +260,54 @@ export class CampaignService {
         charge: true
       }
     });
-  
+
     if (!youtuber) {
       throw new ApiError(404, 'YouTuber not found');
     }
-  
+
     const totalCost = youtuber.charge * input.playsNeeded;
-  
-    // Create Order in Razorpay
-    const razorpayOrder = await razorpay.orders.create({
-      amount: totalCost * 100, // Razorpay expects amount in paise (₹ x 100)
-      currency: "INR",
-      receipt: `receipt_${Date.now()}`,
-      payment_capture: true // Auto-capture payment
-    });
-  
-    const campaign = await prisma.campaign.create({
-      data: {
-        name: input.name,
-        description: input.description,
-        budget: totalCost,
-        targetViews: (youtuber.currentCCV || 0) * input.playsNeeded,
-        status: 'ACTIVE',
-        companyId: input.companyId,
-        brandLink: input.brandLink,
-        youtubers: {
-          connect: [{ id: youtuber.id }]
+
+    return prisma.$transaction(async (prisma) => {
+      const campaign = await prisma.campaign.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          budget: totalCost,
+          targetViews: (youtuber.currentCCV || 0) * input.playsNeeded,
+          companyId: input.companyId,
+          status: 'ACTIVE',
+          brandLink: input.brandLink,
+          youtubers: {
+            connect: [{ id: youtuber.id }]
+          }
         }
-      },
-      include: { youtubers: true }
+      });
+
+      const payment = await prisma.payment.create({
+        data: {
+          amount: totalCost,
+          status: 'PENDING',
+          campaignId: campaign.id,
+          companyId: input.companyId,
+          youtuberId: youtuber.id,
+          orderId: `order_${Date.now()}`,
+          earnings: totalCost * 0.7,
+          platformFee: totalCost * 0.3,
+          playsNeeded: input.playsNeeded
+        }
+      });
+
+      await VideoQueueService.uploadVideoToYoutuberWithPlays(
+        youtuber.id,
+        {
+          url: input.videoUrl,
+          campaignId: campaign.id,
+          paymentId: payment.id
+        },
+        input.playsNeeded
+      );
+
+      return { campaign, payment };
     });
-  
-    // Store Order ID from Razorpay in Database
-    const payment = await prisma.payment.create({
-      data: {
-        amount: totalCost,
-        status: 'PENDING',
-        campaignId: campaign.id,
-        companyId: input.companyId,
-        youtuberId: youtuber.id,
-        orderId: razorpayOrder.id,
-        earnings: totalCost * 0.7, 
-        platformFee: totalCost * 0.3,
-        playsNeeded: input.playsNeeded,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    });
-  
-    return {
-      amount: payment.amount,
-      orderId: razorpayOrder.id,
-      currency: "INR"
-    };
   }
 }

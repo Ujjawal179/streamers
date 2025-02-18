@@ -26,3 +26,13 @@ export interface IVideoUpload {
   campaignId?: string;
   paymentId?: string;
 }
+
+export interface SingleYoutuberCampaignInput {
+  youtuberId: string;
+  name: string;
+  description?: string;
+  companyId: string;
+  brandLink?: string;
+  playsNeeded: number;
+  videoUrl: string;  // Add this field
+}

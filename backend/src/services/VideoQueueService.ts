@@ -7,16 +7,14 @@ export class VideoQueueService {
     totalPlays: number;
   }, scheduledTime?: number) {
     const key = `youtuber:${youtuberId}:videos`;
-    const queueItem = {
+    return addToQueue(key, {
       ...video,
       uploadedAt: new Date().toISOString(),
       sequence: {
         current: video.playNumber,
         total: video.totalPlays
       }
-    };
-
-    return addToQueue(key, queueItem, scheduledTime);
+    }, scheduledTime);
   }
 
   static async getNextVideo(youtuberId: string) {
@@ -50,5 +48,36 @@ export class VideoQueueService {
   static async getQueueLength(youtuberId: string): Promise<number> {
     const key = `youtuber:${youtuberId}:videos`;
     return getQueueLength(key);
+  }
+
+  static async removeCurrentVideo(youtuberId: string) {
+    const key = `youtuber:${youtuberId}:videos`;
+    // Get the video first
+    const video = await this.getNextVideo(youtuberId);
+    if (!video) return null;
+
+    // Remove it from queue
+    await removeFromQueue(key);
+    return video;
+  }
+
+  static async uploadVideoToYoutuberWithPlays(
+    youtuberId: string, 
+    videoData: IVideoUpload, 
+    playsNeeded: number
+  ) {
+    const uploads = [];
+    for (let i = 0; i < playsNeeded; i++) {
+      uploads.push(
+        this.addToYoutuberQueue(youtuberId, {
+          ...videoData,
+          playNumber: i + 1,
+          totalPlays: playsNeeded,
+          sequence: { current: i + 1, total: playsNeeded },
+          uploadedAt: new Date().toISOString()
+        })
+      );
+    }
+    return Promise.all(uploads);
   }
 }

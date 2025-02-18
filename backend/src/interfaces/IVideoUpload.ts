@@ -9,6 +9,9 @@ export interface IVideoUpload {
   paymentId?: string;
   uploadedAt?: string;
   playsNeeded?: number;
-  donationId?: string; // Make this optional
-  brandLink?: string;  // Add this field
+  donationId?: string;
+  sequence?: {
+    current: number;
+    total: number;
+  };
 }
