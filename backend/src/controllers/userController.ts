@@ -42,35 +42,63 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
+    // Update the company registration section to:
     if (userType === 'company') {
-      const existingCompany = await prisma.company.findUnique({ where: { email } });
-      if (existingCompany) {
+      // Check if user exists with email
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        include: { 
+          company: true,
+          youtuber: true 
+        }
+      });
+
+      // Type guard to check user exists
+      if (existingUser) {
+        // Check associations
+        const isCompany = !!existingUser.company;
+        const isYoutuber = !!existingUser.youtuber;
+        
+        let message = 'Email already registered';
+        if (isCompany) message += ' as company';
+        if (isYoutuber) message += ' as youtuber';
+        
         return res.status(400).json({
           success: false,
-          message: 'Email already registered'
+          message
         });
       }
 
+      // Proceed with company creation
       const company = await prisma.company.create({
         data: { 
-          name, 
-          email, 
-          password: hashedPassword,
+          name,
+          user: {
+            create: {
+              email,
+              password: hashedPassword,
+              name,
+              role: 'COMPANY',
+              isVerified: false,
+              verificationToken
+            }
+          },
           verificationToken,
           isVerified: false
         }
       });
 
       await sendVerificationEmail(email, verificationToken);
-
       return res.status(201).json({
         success: true,
         message: 'Registration successful. Please check your email to verify your account.'
       });
     }
-
-    const existingYoutuber = await prisma.youtuber.findUnique({ where: { email } });
-    if (existingYoutuber) {
+    const existingYoutuberUser = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    if (existingYoutuberUser) {
       return res.status(400).json({
         success: false,
         message: 'Email already registered'
@@ -79,16 +107,23 @@ export const register = async (req: Request, res: Response) => {
 
     const youtuber = await prisma.youtuber.create({
       data: {
-        name,
-        email,
-        password: hashedPassword,
+        user: {
+          create: {
+            email,
+            password: hashedPassword,
+            name,
+            role: 'YOUTUBER'
+          }
+        },
         alertBoxUrl: `${process.env.FRONTEND_URL}/alert-box/${crypto.randomUUID()}`,
         MagicNumber: generateUniqueCode(),
         verificationToken,
         isVerified: false
       }
     });
-
+    
+    
+    
     await sendVerificationEmail(email, verificationToken);
 
     return res.status(201).json({
@@ -123,16 +158,20 @@ export const login = async (req: Request, res: Response) => {
     const { email, password, userType } = parseResult.data;
 
     if (userType === 'company') {
-      const company = await prisma.company.findUnique({ where: { email } });
       
-      if (!company || !await bcrypt.compare(password, company.password)) {
+      const companyUser = await prisma.user.findUnique({
+        where: { email },
+        include: { company: true }
+      });
+      
+      if (!companyUser?.company || !await bcrypt.compare(password, companyUser.password)) {
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
         });
       }
 
-      if (!company.isVerified) {
+      if (!companyUser.isVerified) {
         return res.status(401).json({
           success: false,
           message: 'Email not verified. Please check your email.'
@@ -140,29 +179,33 @@ export const login = async (req: Request, res: Response) => {
       }
 
       const token = jwt.sign(
-        { id: company.id, userType },
+        { id: companyUser.id, userType },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       return res.status(200).json({
         success: true,
-        user: { ...company, password: undefined },
+        user: { ...companyUser, password: undefined },
         userType,
         token
       });
     }
 
-    const youtuber = await prisma.youtuber.findUnique({ where: { email } });
-    
-    if (!youtuber || !await bcrypt.compare(password, youtuber.password)) {
+    // Updated login for Youtuber
+    const youtuberUser = await prisma.user.findUnique({
+      where: { email },
+      include: { youtuber: true }
+    });
+
+    if (!youtuberUser?.youtuber || !await bcrypt.compare(password, youtuberUser.password)) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    if (!youtuber.isVerified) {
+    if (!youtuberUser.isVerified) {
       return res.status(401).json({
         success: false,
         message: 'Email not verified. Please check your email.'
@@ -170,14 +213,14 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { id: youtuber.id, userType },
+      { id: youtuberUser.id, userType },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     return res.status(200).json({
       success: true,
-      user: { ...youtuber, password: undefined },
+      user: { ...youtuberUser, password: undefined },
       userType,
       token
     });
@@ -195,16 +238,12 @@ export const login = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
 
-  if (!token) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Missing verification token' 
-    });
-  }
-
   try {
+    // Verify Company
     const company = await prisma.company.findFirst({
-      where: { verificationToken: token as string }
+      where: { 
+        verificationToken: token as string 
+      }
     });
 
     if (company) {
@@ -221,8 +260,11 @@ export const verifyEmail = async (req: Request, res: Response) => {
       });
     }
 
+    // Verify Youtuber
     const youtuber = await prisma.youtuber.findFirst({
-      where: { verificationToken: token as string }
+      where: { 
+        verificationToken: token as string 
+      }
     });
 
     if (youtuber) {
@@ -241,7 +283,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     return res.status(400).json({ 
       success: false, 
-      message: 'Invalid or expired verification token' 
+      message: 'Invalid token' 
     });
   } catch (error) {
     console.error('Verification error:', error);
@@ -251,7 +293,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
     });
   }
 };
-
 // Keep existing getCloudinarySignature function
 export const getCloudinarySignature = (req: Request, res: Response) => {
   try {

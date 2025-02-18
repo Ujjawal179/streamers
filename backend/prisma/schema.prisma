@@ -11,6 +11,9 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
+  name      String
+  isVerified          Boolean   @default(false)
+  verificationToken   String?
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -22,10 +25,9 @@ model User {
 model Company {
   id        String     @id @default(uuid())
   name      String
-  password            String
-  isVerified          Boolean   @default(false)
-  verificationToken   String?
   userId    String     @unique
+  verificationToken String?
+  isVerified        Boolean @default(false)
   user      User       @relation(fields: [userId], references: [id])
   balance   Float      @default(0)
   campaigns Campaign[]
@@ -41,13 +43,11 @@ model Company {
 
 model Youtuber {
   id              String            @id @default(uuid())
-  name                String
-  password            String
-  isVerified          Boolean   @default(false)
-  verificationToken   String?
   userId          String            @unique
   user            User              @relation(fields: [userId], references: [id])
   channelName     String?
+  verificationToken String?
+  isVerified        Boolean @default(false)
   subscriberCount Int               @default(0)
   averageViews    Int               @default(0)
   currentCCV      Int               @default(0)
