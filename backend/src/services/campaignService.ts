@@ -283,6 +283,15 @@ export class CampaignService {
         }
       });
 
+        
+    // Create Order in Razorpay
+    const razorpayOrder = await razorpay.orders.create({
+      amount: totalCost * 100, // Razorpay expects amount in paise (₹ x 100)
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
+      payment_capture: true // Auto-capture payment
+    });
+
       const payment = await prisma.payment.create({
         data: {
           amount: totalCost,
@@ -290,7 +299,7 @@ export class CampaignService {
           campaignId: campaign.id,
           companyId: input.companyId,
           youtuberId: youtuber.id,
-          orderId: `order_${Date.now()}`,
+          orderId: razorpayOrder.id,
           earnings: totalCost * 0.7,
           platformFee: totalCost * 0.3,
           playsNeeded: input.playsNeeded

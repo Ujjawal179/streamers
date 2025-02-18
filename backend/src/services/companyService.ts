@@ -96,7 +96,7 @@ export class CompanyService {
       throw new ApiError(401, 'Invalid YouTuber or PIN');
     }
 
-    return VideoQueueService.getNextVideo(youtuberId);
+    return VideoQueueService.removeCurrentVideo(youtuberId);
   }
 
   static async calculateCampaignYoutubers(requiredViews: number, budget: number): Promise<ICampaignResult> {
