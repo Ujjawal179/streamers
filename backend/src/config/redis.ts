@@ -3,20 +3,22 @@ import { config } from 'dotenv';
 
 config();
 
+const REDIS_CONFIG = {
+  username: process.env.REDIS_USERNAME || 'default',
+  password: process.env.REDIS_PASSWORD,
+  socket: {
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT)
+  }
+};
+
 class RedisService {
   private static instance: RedisService;
   private client: any;
   private isInitialized: boolean = false;
 
   private constructor() {
-    this.client = createClient({
-      username: process.env.REDIS_USERNAME || 'default',
-      password: process.env.REDIS_PASSWORD,
-      socket: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT)
-      }
-    });
+    this.client = createClient(REDIS_CONFIG);
 
     this.client.on('error', (err: any) => {
       console.error('Redis Client Error:', err);
@@ -132,4 +134,6 @@ export const getQueueItems = async (key: string, start = 0, end = -1) => {
   return items.map((item: string): QueueItem => JSON.parse(item));
 };
 
-export default RedisService;
+export {
+  RedisService as default
+};
