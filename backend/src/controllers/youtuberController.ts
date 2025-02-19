@@ -101,6 +101,8 @@ export class YoutuberController {
           isLive: true,
           alertBoxUrl: true,
           averageViews: true,
+          avatar: true,
+          description: true,
         }
       });
 
