@@ -6,28 +6,28 @@ config();
 class RedisService {
   private static instance: RedisService;
   private client: any;
+  private connectionPromise: Promise<any> | null = null;
   private isInitialized: boolean = false;
 
   private constructor() {
     this.client = createClient({
-      username: process.env.REDIS_USERNAME || 'default',
+      username: 'default',
       password: process.env.REDIS_PASSWORD,
       socket: {
         host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT)
+        port: Number(process.env.REDIS_PORT),
+        reconnectStrategy: (retries: number) => {
+          if (retries > 10) {
+            console.error('Max reconnection attempts reached');
+            return new Error('Max reconnection attempts reached');
+          }
+          return Math.min(retries * 100, 3000);
+        }
       }
     });
 
     this.client.on('error', (err: any) => {
       console.error('Redis Client Error:', err);
-    });
-
-    this.client.on('connect', () => {
-      console.log('Redis Client Connected');
-    });
-
-    this.client.on('ready', () => {
-      console.log('Redis Client Ready');
     });
   }
 
@@ -39,22 +39,25 @@ class RedisService {
   }
 
   async initialize() {
-    if (!this.isInitialized) {
-      try {
-        await this.client.connect();
-        this.isInitialized = true;
-        console.log('Redis initialized successfully');
-        
-        // Test connection
-        await this.client.set('test', 'connection');
-        const testResult = await this.client.get('test');
-        console.log('Redis connection test:', testResult);
-      } catch (error) {
-        console.error('Redis initialization failed:', error);
-        throw error;
-      }
+    if (this.isInitialized) {
+      return this.client;
     }
-    return this.client;
+
+    if (!this.connectionPromise) {
+      this.connectionPromise = this.client.connect()
+        .then(() => {
+          this.isInitialized = true;
+          console.log('Redis initialized successfully');
+          return this.client;
+        })
+        .catch((error: any) => {
+          this.connectionPromise = null;
+          console.error('Redis initialization failed:', error);
+          throw error;
+        });
+    }
+
+    return this.connectionPromise;
   }
 
   getClient() {
@@ -68,25 +71,30 @@ class RedisService {
     if (this.isInitialized) {
       await this.client.quit();
       this.isInitialized = false;
+      this.connectionPromise = null;
       console.log('Redis disconnected');
     }
   }
 }
 
+// Singleton instance for the entire application
+let redisInstance: any = null;
+
 // Export a single setupRedis function that ensures initialization
 export const setupRedis = async () => {
-  try {
+  if (!redisInstance) {
     const redisService = RedisService.getInstance();
-    await redisService.initialize();
-    return true;
-  } catch (error) {
-    console.error('Redis setup failed:', error);
-    throw error;
+    redisInstance = await redisService.initialize();
   }
+  return redisInstance;
 };
 
+// Get the Redis client (only after setup)
 export const getRedisClient = () => {
-  return RedisService.getInstance().getClient();
+  if (!redisInstance) {
+    throw new Error('Redis not initialized. Call setupRedis() first');
+  }
+  return redisInstance;
 };
 
 // Update existing functions to use the singleton client
