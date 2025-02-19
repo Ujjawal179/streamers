@@ -1,26 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "dist/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/index.js",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "https://www.streamers.media",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Authorization,Origin,Accept",
-        "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Max-Age": "86400"
+    "builds": [
+      {
+        "src": "src/index.ts",
+        "use": "@vercel/node"
       }
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "src/index.ts"
+      }
+    ]
   }
-}
