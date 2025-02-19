@@ -38,6 +38,42 @@ const initializeApp = async () => {
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
 
+    // Add headers middleware
+    app.use((req, res, next) => {
+      // Allow specific origins
+      const origin = req.headers.origin;
+      if (origin && corsOptions.origin) {
+        if (typeof corsOptions.origin === 'function') {
+          corsOptions.origin(origin, (err, allowed) => {
+            if (allowed) {
+              res.setHeader('Access-Control-Allow-Origin', origin);
+            }
+          });
+        }
+      }
+
+      // Allow credentials
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      
+      // Allow specific headers
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+      );
+
+      // Allow specific methods
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+      );
+
+      if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+      }
+
+      next();
+    });
+
     // Start queue worker after Redis is initialized
     startQueueWorker();
 
