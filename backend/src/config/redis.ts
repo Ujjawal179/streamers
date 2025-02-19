@@ -10,10 +10,25 @@ class RedisService {
 
   private constructor() {
     this.client = createClient({
-      url: process.env.REDIS_URL
+      username: process.env.REDIS_USERNAME || 'default',
+      password: process.env.REDIS_PASSWORD,
+      socket: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT)
+      }
     });
 
-    this.client.on('error', (err: any) => console.error('Redis Client Error', err));
+    this.client.on('error', (err: any) => {
+      console.error('Redis Client Error:', err);
+    });
+
+    this.client.on('connect', () => {
+      console.log('Redis Client Connected');
+    });
+
+    this.client.on('ready', () => {
+      console.log('Redis Client Ready');
+    });
   }
 
   static getInstance(): RedisService {
@@ -25,9 +40,19 @@ class RedisService {
 
   async initialize() {
     if (!this.isInitialized) {
-      await this.client.connect();
-      this.isInitialized = true;
-      console.log('Redis initialized successfully');
+      try {
+        await this.client.connect();
+        this.isInitialized = true;
+        console.log('Redis initialized successfully');
+        
+        // Test connection
+        await this.client.set('test', 'connection');
+        const testResult = await this.client.get('test');
+        console.log('Redis connection test:', testResult);
+      } catch (error) {
+        console.error('Redis initialization failed:', error);
+        throw error;
+      }
     }
     return this.client;
   }
@@ -38,6 +63,14 @@ class RedisService {
     }
     return this.client;
   }
+
+  async disconnect() {
+    if (this.isInitialized) {
+      await this.client.quit();
+      this.isInitialized = false;
+      console.log('Redis disconnected');
+    }
+  }
 }
 
 // Export a single setupRedis function that ensures initialization
@@ -47,7 +80,7 @@ export const setupRedis = async () => {
     await redisService.initialize();
     return true;
   } catch (error) {
-    console.error('Redis initialization failed:', error);
+    console.error('Redis setup failed:', error);
     throw error;
   }
 };
