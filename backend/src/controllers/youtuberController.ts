@@ -2,8 +2,11 @@ import { Request, Response } from 'express';
 import prisma from '../db/db';
 import { BankingDetails } from '../types/banking';
 import { YoutuberService } from '../services/youtuberService';
-
+import { NightbotService } from '../services/nightbotService';
 export class YoutuberController {
+  private static youtuberService = new YoutuberService();
+  private static nightbotService = new NightbotService();
+
   static async updateYoutuber(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -16,12 +19,7 @@ export class YoutuberController {
         });
       }
 
-      // Convert numeric fields to numbers
-      if (updateData.averageViews !== undefined) {
-        updateData.averageViews = Number(updateData.averageViews);
-        // Calculate and set charge based on average views
-        updateData.charge = YoutuberService.calculateYouTubeAdCost(updateData.averageViews);
-      }
+      // Remove averageViews handling as it will now come from Nightbot
       if (updateData.timeout !== undefined) {
         updateData.timeout = Number(updateData.timeout);
       }
@@ -29,7 +27,6 @@ export class YoutuberController {
         updateData.charge = Number(updateData.charge);
       }
 
-      // Perform the update with all provided data
       const youtuber = await prisma.youtuber.update({
         where: { id },
         data: updateData
@@ -47,7 +44,6 @@ export class YoutuberController {
       });
     }
   }
-  
   static async getUsername(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -86,7 +82,62 @@ export class YoutuberController {
       });
     }
   }
+  static async updateViewerCount(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
 
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Youtuber ID is required' });
+      }
+
+      // Get channel info from database
+      const youtuber = await prisma.youtuber.findUnique({
+        where: { id },
+        select: { channelLink: true }
+      });
+
+      if (!youtuber || !youtuber.channelLink?.length) {
+        return res.status(404).json({ success: false, error: 'Youtuber or channel not found' });
+      }
+
+      // Assuming channelLink is an array, take the first one
+      const channelId = youtuber.channelLink[0].split('/').pop(); // Extract channel ID from URL
+      
+      const liveData = await this.nightbotService.updateRealTimeViews(channelId);
+
+      if (!liveData) {
+        await this.youtuberService.updateLiveStatus(id, false);
+        return res.status(404).json({ success: false, error: 'No active live stream found' });
+      }
+
+      // Update youtuber's live status and viewer count
+      const viewers = Number(liveData.viewers) || 0;
+      const updatedYoutuber = await this.youtuberService.updateYoutuber(id, {
+        isLive: true,
+        averageViews: viewers,
+        charge: YoutuberService.calculateYouTubeAdCost(viewers)
+      });
+
+      let messageId = null;
+      if (message && liveData.liveChatId) {
+        messageId = await this.nightbotService.sendStreamMessage(liveData.liveChatId, message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          viewers: liveData.viewers,
+          messageId,
+          liveChatId: liveData.liveChatId,
+          youtuber: updatedYoutuber
+        }
+      });
+    } catch (error) {
+      console.error('Update viewer count error:', error);
+      return res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
   static async getYoutuberDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;
