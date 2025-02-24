@@ -3,6 +3,7 @@ import prisma from '../db/db';
 import { BankingDetails } from '../types/banking';
 import { YoutuberService } from '../services/youtuberService';
 import { NightbotService } from '../services/nightbotService';
+
 export class YoutuberController {
   private static youtuberService = new YoutuberService();
   private static nightbotService = new NightbotService();
@@ -44,6 +45,7 @@ export class YoutuberController {
       });
     }
   }
+
   static async getUsername(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -82,6 +84,7 @@ export class YoutuberController {
       });
     }
   }
+
   static async updateViewerCount(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -101,19 +104,28 @@ export class YoutuberController {
         return res.status(404).json({ success: false, error: 'Youtuber or channel not found' });
       }
 
-      // Assuming channelLink is an array, take the first one
-      const channelId = youtuber.channelLink[0].split('/').pop(); // Extract channel ID from URL
+      // Assuming channelLink is an array, take the first one and ensure it's a valid string
+      const channelLink = youtuber.channelLink[0];
+      if (!channelLink) {
+        return res.status(400).json({ success: false, error: 'Invalid channel link' });
+      }
+
+      // Extract channel ID from URL, ensuring it's not undefined
+      const channelId = channelLink.split('/').pop();
+      if (!channelId) {
+        return res.status(400).json({ success: false, error: 'Invalid channel ID extracted from URL' });
+      }
       
       const liveData = await this.nightbotService.updateRealTimeViews(channelId);
 
       if (!liveData) {
-        await this.youtuberService.updateLiveStatus(id, false);
+        await YoutuberService.updateLiveStatus(id, false); // Call as static method
         return res.status(404).json({ success: false, error: 'No active live stream found' });
       }
 
       // Update youtuber's live status and viewer count
       const viewers = Number(liveData.viewers) || 0;
-      const updatedYoutuber = await this.youtuberService.updateYoutuber(id, {
+      const updatedYoutuber = await YoutuberService.updateYoutuber(id, { // Call as static method
         isLive: true,
         averageViews: viewers,
         charge: YoutuberService.calculateYouTubeAdCost(viewers)
@@ -138,6 +150,7 @@ export class YoutuberController {
       return res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
+
   static async getYoutuberDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;

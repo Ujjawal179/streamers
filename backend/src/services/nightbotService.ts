@@ -1,6 +1,6 @@
 // nightbotService.ts
 import { google } from 'googleapis';
-
+import token from '../../token.json';
 export class NightbotService {
   private youtube: any;
   
@@ -12,7 +12,7 @@ export class NightbotService {
     const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUrl);
     
     try {
-      const token = require('./token.json');
+      // const token = require('./token.json');
       auth.setCredentials(token);
     } catch (e) {
       throw new Error('No token.json found. Please generate OAuth token first.');

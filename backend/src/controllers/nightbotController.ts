@@ -1,6 +1,6 @@
 // nightbotController.ts
 import { Request, Response } from 'express';
-import { NightbotService } from './nightbotService';
+import { NightbotService } from '../services/nightbotService';
 
 export class NightbotController {
   private nightbotService: NightbotService;
