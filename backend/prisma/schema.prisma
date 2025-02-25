@@ -22,6 +22,21 @@ model User {
   youtuber Youtuber?
 }
 
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  youtuberId  String
+  youtuber    Youtuber @relation(fields: [youtuberId], references: [id])
+  channelId   String
+  liveChatId  String
+  messageId   String   @unique
+  messageText String   // Full message (e.g., "For more such Videos go to https://www.youtube.com/")
+  url         String?  // Extracted URL (optional, nullable)
+  clicks      Int      @default(0) // Placeholder for click count
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Company {
   id        String     @id @default(uuid())
   name      String
@@ -73,6 +88,7 @@ model Youtuber {
   donations       Donation[]
   schedules       AdSchedule[]
   analytics       StreamAnalytics[]
+  chatMessages    ChatMessage[]
   payments        Payment[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -195,3 +211,4 @@ enum PaymentStatus {
   REFUNDED
   PROCESSING
 }
+
