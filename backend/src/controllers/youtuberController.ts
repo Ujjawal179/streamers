@@ -20,7 +20,6 @@ export class YoutuberController {
         });
       }
 
-      // Remove averageViews handling as it will now come from Nightbot
       if (updateData.timeout !== undefined) {
         updateData.timeout = Number(updateData.timeout);
       }
@@ -53,7 +52,7 @@ export class YoutuberController {
         where: { id },
         select: { 
           name: true,
-          channelLink: true, // Changed from channelName to channelLink
+          channelLink: true,
           charge: true,
           isLive: true,
           timeout: true
@@ -70,7 +69,7 @@ export class YoutuberController {
       return res.status(200).json({
         success: true,
         data: {
-          username: youtuber.name || youtuber.channelLink[0], // Use first channel link if name not set
+          username: youtuber.name || youtuber.channelLink[0],
           charge: youtuber.charge,
           isLive: youtuber.isLive,
           timeout: youtuber.timeout || 30
@@ -87,53 +86,50 @@ export class YoutuberController {
 
   static async updateViewerCount(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const { id } = req.params; // youtuberId
       const { message } = req.body;
 
       if (!id) {
         return res.status(400).json({ success: false, error: 'Youtuber ID is required' });
       }
 
-      // Get channel info from database
       const youtuber = await prisma.youtuber.findUnique({
         where: { id },
-        select: { channelLink: true }
+        select: { channelLink: true },
       });
 
       if (!youtuber || !youtuber.channelLink?.length) {
         return res.status(404).json({ success: false, error: 'Youtuber or channel not found' });
       }
 
-      // Assuming channelLink is an array, take the first one and ensure it's a valid string
-      const channelLink = youtuber.channelLink[0];
-      if (!channelLink) {
-        return res.status(400).json({ success: false, error: 'Invalid channel link' });
+      const channelId = youtuber.channelLink[0].split('/').pop();
+      if (!channelId) {
+        return res.status(400).json({ success: false, error: 'Invalid channel ID' });
       }
 
-      // Extract channel ID from URL, ensuring it's not undefined
-      const channelId = channelLink.split('/').pop();
-      if (!channelId) {
-        return res.status(400).json({ success: false, error: 'Invalid channel ID extracted from URL' });
-      }
-      
       const liveData = await this.nightbotService.updateRealTimeViews(channelId);
 
       if (!liveData) {
-        await YoutuberService.updateLiveStatus(id, false); // Call as static method
+        await YoutuberService.updateLiveStatus(id, false);
         return res.status(404).json({ success: false, error: 'No active live stream found' });
       }
 
-      // Update youtuber's live status and viewer count
       const viewers = Number(liveData.viewers) || 0;
-      const updatedYoutuber = await YoutuberService.updateYoutuber(id, { // Call as static method
+      const updatedYoutuber = await YoutuberService.updateYoutuber(id, {
         isLive: true,
         averageViews: viewers,
-        charge: YoutuberService.calculateYouTubeAdCost(viewers)
+        charge: YoutuberService.calculateYouTubeAdCost(viewers),
       });
 
       let messageId = null;
       if (message && liveData.liveChatId) {
-        messageId = await this.nightbotService.sendStreamMessage(liveData.liveChatId, message);
+        // Pass all required arguments to sendStreamMessage
+        messageId = await this.nightbotService.sendStreamMessage(
+          liveData.liveChatId,
+          message,
+          channelId,
+          id // youtuberId
+        );
       }
 
       return res.status(200).json({
@@ -142,8 +138,8 @@ export class YoutuberController {
           viewers: liveData.viewers,
           messageId,
           liveChatId: liveData.liveChatId,
-          youtuber: updatedYoutuber
-        }
+          youtuber: updatedYoutuber,
+        },
       });
     } catch (error) {
       console.error('Update viewer count error:', error);

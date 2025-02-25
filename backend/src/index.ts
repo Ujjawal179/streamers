@@ -16,7 +16,7 @@ import companyRoutes from './routes/companyRoutes';
 import youtuberRoutes from './routes/youtuberRoutes';
 import userRoutes from './routes/userRoutes';
 import MediaRouter from "./routes/mediaRoutes"; // Import media routes
-
+import clickCounterRoutes from './routes/clickCounterRoutes';
 config();
 
 let globalIo: Server;
@@ -88,7 +88,7 @@ const initializeApp = async () => {
     app.use('/api/v1/youtubers', youtuberRoutes);
     app.use('/api/v1', userRoutes);
     app.use('/api/v1/media', MediaRouter); // Use media routes
-
+    app.use('/api/v1', clickCounterRoutes);
     const port = process.env.PORT || 3001;
     server.listen(port, () => {
       console.log(`Server is running at http://localhost:${port}`);

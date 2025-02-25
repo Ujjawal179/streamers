@@ -1,18 +1,19 @@
-// nightbotService.ts
+// src/services/nightbotService.ts
 import { google } from 'googleapis';
 import token from '../../token.json';
+import { ClickCounterService } from './clickCounterService';
+
 export class NightbotService {
   private youtube: any;
-  
+
   constructor() {
     const clientId = process.env.CLIENT_ID;
     const clientSecret = process.env.CLIENT_SECRET;
     const redirectUrl = process.env.REDIRECT_URL;
 
     const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUrl);
-    
+
     try {
-      // const token = require('./token.json');
       auth.setCredentials(token);
     } catch (e) {
       throw new Error('No token.json found. Please generate OAuth token first.');
@@ -58,7 +59,7 @@ export class NightbotService {
 
       return {
         viewers: liveDetails.concurrentViewers || 'Unknown',
-        liveChatId: liveDetails.activeLiveChatId
+        liveChatId: liveDetails.activeLiveChatId,
       };
     } catch (error) {
       console.error('Error fetching live broadcast:', error);
@@ -66,7 +67,12 @@ export class NightbotService {
     }
   }
 
-  async sendStreamMessage(liveChatId: string, message: string): Promise<string | null> {
+  async sendStreamMessage(
+    liveChatId: string,
+    message: string,
+    channelId: string,
+    youtuberId: string
+  ): Promise<string | null> {
     try {
       const response = await this.youtube.liveChatMessages.insert({
         part: 'snippet',
@@ -80,7 +86,11 @@ export class NightbotService {
           },
         },
       });
-      return response.data.id;
+
+      const messageId = response.data.id;
+      // Store the message in the database with all required parameters
+      await ClickCounterService.storeChatMessage(youtuberId, channelId, liveChatId, messageId, message);
+      return messageId;
     } catch (error) {
       console.error('Error posting message:', error);
       return null;
