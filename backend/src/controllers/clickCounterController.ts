@@ -3,7 +3,6 @@ import { Request, Response } from 'express';
 import { ClickCounterService } from '../services/clickCounterService';
 
 export class ClickCounterController {
-  // Update click count manually (e.g., from external analytics)
   static async updateClickCount(req: Request, res: Response) {
     const { messageId, clicks } = req.body;
 
@@ -29,7 +28,6 @@ export class ClickCounterController {
     }
   }
 
-  // Get click count for a message
   static async getClickCount(req: Request, res: Response) {
     const { messageId } = req.params;
 
@@ -44,6 +42,28 @@ export class ClickCounterController {
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch click count',
+      });
+    }
+  }
+
+  static async handleRedirect(req: Request, res: Response) {
+    const { redirectId } = req.params; // Change from messageId to redirectId
+
+    try {
+      const originalUrl = await ClickCounterService.incrementClickAndGetUrl(redirectId);
+      if (!originalUrl) {
+        return res.status(404).json({
+          success: false,
+          error: 'No URL found for this redirect ID',
+        });
+      }
+
+      return res.redirect(originalUrl);
+    } catch (error) {
+      console.error('Redirect error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process redirect',
       });
     }
   }
