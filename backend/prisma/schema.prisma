@@ -30,6 +30,7 @@ model ChatMessage {
   channelId   String
   liveChatId  String
   messageId   String   @unique
+  redirectId  String   @unique
   messageText String   // Full message (e.g., "For more such Videos go to https://www.youtube.com/")
   url         String?  // Extracted URL (optional, nullable)
   clicks      Int      @default(0) // Placeholder for click count
