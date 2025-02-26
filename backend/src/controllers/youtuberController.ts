@@ -88,56 +88,64 @@ export class YoutuberController {
     try {
       const { id } = req.params; // youtuberId
       const { message } = req.body;
-
+  
       if (!id) {
         return res.status(400).json({ success: false, error: 'Youtuber ID is required' });
       }
-
+  
       const youtuber = await prisma.youtuber.findUnique({
         where: { id },
         select: { channelLink: true },
       });
-
+  
       if (!youtuber || !youtuber.channelLink?.length) {
-        return res.status(404).json({ success: false, error: 'Youtuber or channel not found' });
+        return res.status(404).json({ success: false, error: 'Youtuber or channel Link not found' });
       }
-
-      const channelId = youtuber.channelLink[0].split('/').pop();
+  
+      const channelLink = youtuber.channelLink[0];
+      const channelId = await YoutuberController.nightbotService.getChannelIdByUsername(channelLink);
+  
       if (!channelId) {
-        return res.status(400).json({ success: false, error: 'Invalid channel ID' });
+        return res.status(400).json({ success: false, error: 'Could not derive channel ID from channel link' });
       }
-
-      const liveData = await this.nightbotService.updateRealTimeViews(channelId);
-
+  
+      const liveData = await YoutuberController.nightbotService.updateRealTimeViews(channelId);
+  
+      let viewers: number;
       if (!liveData) {
+        const averageViews = await YoutuberController.nightbotService.calculateAverageViews(channelId);
+        if (averageViews === null) {
+          return res.status(500).json({ success: false, error: 'Failed to calculate average views' });
+        }
+        viewers = Math.round(averageViews);
         await YoutuberService.updateLiveStatus(id, false);
-        return res.status(404).json({ success: false, error: 'No active live stream found' });
+      } else {
+        viewers = Number(liveData.viewers) || 0;
+        await YoutuberService.updateLiveStatus(id, true);
       }
-
-      const viewers = Number(liveData.viewers) || 0;
+  
       const updatedYoutuber = await YoutuberService.updateYoutuber(id, {
-        isLive: true,
+        isLive: liveData ? true : false,
         averageViews: viewers,
         charge: YoutuberService.calculateYouTubeAdCost(viewers),
       });
-
+  
       let messageId = null;
-      if (message && liveData.liveChatId) {
-        // Pass all required arguments to sendStreamMessage
-        messageId = await this.nightbotService.sendStreamMessage(
+      if (message && liveData && liveData.liveChatId) {
+        messageId = await YoutuberController.nightbotService.sendStreamMessage(
           liveData.liveChatId,
           message,
           channelId,
-          id // youtuberId
+          id
         );
       }
-
+  
       return res.status(200).json({
         success: true,
         data: {
-          viewers: liveData.viewers,
+          viewers: viewers.toString(),
           messageId,
-          liveChatId: liveData.liveChatId,
+          liveChatId: liveData ? liveData.liveChatId : null,
           youtuber: updatedYoutuber,
         },
       });
@@ -146,7 +154,6 @@ export class YoutuberController {
       return res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
-
   static async getYoutuberDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { BACKEND_API_URL } from '../config/env';
-const BASE_URL: string = BACKEND_API_URL;
 
 interface PaymentData {
   amount: number;
@@ -24,7 +23,7 @@ interface ApiResponse {
 
 export const createPayment = async (paymentData: PaymentData): Promise<ApiResponse> => {
   try {
-    const response = await axios.post(`${BASE_URL}/api/v1/payments/create-payment`, paymentData, {
+    const response = await axios.post(`${BACKEND_API_URL}/api/v1/payments/create-payment`, paymentData, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -42,7 +41,7 @@ export const createPayment = async (paymentData: PaymentData): Promise<ApiRespon
 
 export const verifyPayment = async (verifyPaymentData: VerifyPaymentData): Promise<ApiResponse> => {
   try {
-    const response = await axios.post(`${BASE_URL}/api/v1/payments/verify-payment`, verifyPaymentData, {
+    const response = await axios.post(`${BACKEND_API_URL}/api/v1/payments/verify-payment`, verifyPaymentData, {
       headers: {
         'Content-Type': 'application/json',
       },
