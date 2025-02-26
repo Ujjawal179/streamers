@@ -9,7 +9,7 @@ router.post('/campaign/:companyId', authenticateCompany, VideoController.uploadC
 router.post('/direct/:youtuberId', authenticateCompany, VideoController.uploadDirectVideo);
 router.get('/queue/:youtuberId/next', authenticateCompany, VideoController.getNextVideo);
 router.get('/video/:youtuberId/:pin', VideoController.getVideoByPin);
-router.get('/get-signature', authenticateCompany, getCloudinarySignature);
+router.get('/get-signature', getCloudinarySignature);
 router.get('/length/:youtuberId',  VideoController.getQueueLength);
 // router.delete('/video/:youtuberId', authenticateCompany, VideoController.removeCurrentVideo);
 

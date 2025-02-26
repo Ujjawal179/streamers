@@ -8,6 +8,7 @@ import {
   getPaymentStatus,
   getYoutuberPayments,
   getCompanyPayments,
+  verifyBulkPayment,
 } from '../controllers/paymentController';
 
 const router = Router();
@@ -21,7 +22,8 @@ router.post('/order', auth, createPaymentOrder);
 router.post('/order/campaign', auth, createPaymentOrderForCampaign);
 
 // Payment verification and status
-router.post('/verify', auth, verifyPayment);
+router.post('/verify', verifyPayment);
+router.post('/verify-campaign', verifyBulkPayment);
 router.get('/status/:orderId', auth, getPaymentStatus);
 
 // Payment history routes

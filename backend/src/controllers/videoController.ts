@@ -6,11 +6,10 @@ import { ApiError } from '../utils/ApiError';
 export class VideoController {
   static async uploadCampaignVideo(req: Request, res: Response) {
     try {
-      const { youtuberIds, videoData, playsNeeded} = req.body;
-      const result = await CompanyService.uploadVideoToYoutubers(youtuberIds, videoData, playsNeeded);
+      const {selectedYoutubers, videoData} = req.body;
+      const result = await CompanyService.uploadVideoToYoutubers(selectedYoutubers, videoData);
       res.json({ success: true, data: result });
     } catch (error) {
-      console.log(error)
       res.status(500).json({ success: false, error: 'Failed to upload campaign video' });
     }
   }

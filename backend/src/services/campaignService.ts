@@ -209,8 +209,19 @@ export class CampaignService {
         }
       });
 
+
+      // Create Order in Razorpay
+      const razorpayOrder = await razorpay.orders.create({
+        amount: input.budget * 100, // Razorpay expects amount in paise (₹ x 100)
+        currency: "INR",
+        receipt: `receipt_${Date.now()}`,
+        payment_capture: true // Auto-capture payment
+      });
+
+
+
       // 2. Create payment records and queue videos for each YouTuber
-      const results = await Promise.all(
+      await Promise.all(
         input.youtubers.map(async (youtuber) => {
           // Create payment
           const payment = await prisma.payment.create({
@@ -223,26 +234,26 @@ export class CampaignService {
               status: 'PENDING',
               earnings: youtuber.cost * 0.7,
               platformFee: youtuber.cost * 0.3,
-              orderId: `order_${Date.now()}_${youtuber.id}`
+              orderId: razorpayOrder.id,
             }
           });
 
-          // Queue video for each required play
-          await VideoQueueService.uploadVideoToYoutuberWithPlays(
-            youtuber.id,
-            {
-              url: input.videoUrl,
-              campaignId: campaign.id,
-              paymentId: payment.id
-            },
-            youtuber.playsNeeded
-          );
+          // // Queue video for each required play
+          // await VideoQueueService.uploadVideoToYoutuberWithPlays(
+          //   youtuber.id,
+          //   {
+          //     url: input.videoUrl,
+          //     campaignId: campaign.id,
+          //     paymentId: payment.id
+          //   },
+          //   youtuber.playsNeeded
+          // );
 
           return { youtuberId: youtuber.id, payment, playsNeeded: youtuber.playsNeeded };
         })
       );
 
-      return { campaign, results };
+      return { campaign, orderId: razorpayOrder.id };
     });
   }
 
@@ -265,7 +276,9 @@ export class CampaignService {
       throw new ApiError(404, 'YouTuber not found');
     }
 
-    const totalCost = youtuber.charge * input.playsNeeded;
+    // Calculate total cost based on YouTuber's charge and plays needed
+    // Ensure the cost is an integer to avoid decimal values in payment
+    const totalCost = Math.round(youtuber.charge * input.playsNeeded);
 
     return prisma.$transaction(async (prisma) => {
       const campaign = await prisma.campaign.create({
@@ -306,15 +319,15 @@ export class CampaignService {
         }
       });
 
-      await VideoQueueService.uploadVideoToYoutuberWithPlays(
-        youtuber.id,
-        {
-          url: input.videoUrl,
-          campaignId: campaign.id,
-          paymentId: payment.id
-        },
-        input.playsNeeded
-      );
+      // await VideoQueueService.uploadVideoToYoutuberWithPlays(
+      //   youtuber.id,
+      //   {
+      //     url: input.videoUrl,
+      //     campaignId: campaign.id,
+      //     paymentId: payment.id
+      //   },
+      //   input.playsNeeded
+      // );
 
       return { campaign, payment };
     });

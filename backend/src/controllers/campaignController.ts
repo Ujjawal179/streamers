@@ -93,6 +93,7 @@ export class CampaignController {
 
       res.json({ success: true, data: result });
     } catch (error) {
+      console.log(error);
       if (error instanceof ApiError) {
         res.status(error.statusCode).json({ success: false, error: error.message });
       } else {
