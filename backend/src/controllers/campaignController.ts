@@ -104,7 +104,8 @@ export class CampaignController {
   }
 
   static async getCampaigns(req: Request, res: Response) {
-    const companyId = (req as any).user?.id;
+    const companyId = req.params.id;
+    console.log('Company ID:', companyId);
   
     try {
       const campaigns = await CampaignService.getCampaignsByCompany(companyId);
@@ -113,6 +114,7 @@ export class CampaignController {
         data: campaigns
       });
     } catch (error) {
+      console.log(error);
       res.status(500).json({ 
         success: false,
         error: 'Failed to fetch campaigns' 
