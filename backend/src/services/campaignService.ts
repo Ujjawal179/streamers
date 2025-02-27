@@ -277,7 +277,7 @@ export class CampaignService {
       select: {
         id: true,
         name: true,
-        currentCCV: true,
+        averageViews: true, // Use averageViews instead of currentCCV
         charge: true
       }
     });
@@ -296,7 +296,7 @@ export class CampaignService {
           name: input.name,
           description: input.description,
           budget: totalCost,
-          targetViews: (youtuber.currentCCV || 0) * input.playsNeeded,
+          targetViews: (youtuber.averageViews || 0) * input.playsNeeded, // Use averageViews
           companyId: input.companyId,
           status: 'ACTIVE',
           brandLink: input.brandLink,
@@ -343,55 +343,23 @@ export class CampaignService {
     });
   }
 
-  // Modified method to find optimal youtuber combinations using average views
+  // Simplified method to find optimal youtuber combinations using only averageViews
   static async findOptimalYoutuberCombination(targetViews: number) {
     // 1. Fetch all active YouTubers with their stats
     const youtubers = await prisma.youtuber.findMany({
       where: { 
-        averageViews: { gt: 0 } // Using averageViews instead of currentCCV
+        averageViews: { gt: 0 } // Only using averageViews
       },
       select: {
         id: true,
         name: true,
-        averageViews: true, // Using averageViews instead of currentCCV
+        averageViews: true,
         charge: true
       }
     });
 
-    // If no youtubers found with averageViews, try with currentCCV as fallback
     if (!youtubers.length) {
-      const fallbackYoutubers = await prisma.youtuber.findMany({
-        where: { 
-          currentCCV: { gt: 0 } 
-        },
-        select: {
-          id: true,
-          name: true,
-          currentCCV: true,
-          charge: true
-        }
-      });
-      
-      if (!fallbackYoutubers.length) {
-        throw new ApiError(404, 'No active YouTubers found with view data');
-      }
-      
-      // Map fallback youtubers using currentCCV as averageViews
-      const youtuberData: OptimalYoutuber[] = fallbackYoutubers
-        .map(y => ({
-          id: y.id,
-          name: y.name,
-          averageViews: y.currentCCV || 0,
-          charge: y.charge || 0,
-          playsNeeded: 0,
-          expectedViews: 0,
-          cost: 0,
-          costPerView: y.currentCCV && y.currentCCV > 0 ? y.charge / y.currentCCV : Infinity
-        }))
-        .sort((a, b) => a.costPerView - b.costPerView);
-        
-      // Rest of the algorithm remains the same
-      return this.calculateOptimalCombination(youtuberData, targetViews);
+      throw new ApiError(404, 'No YouTubers found with view data. Please ensure YouTubers have averageViews set.');
     }
 
     // 2. Calculate cost per view for each YouTuber and sort by efficiency
