@@ -394,10 +394,19 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Payment not captured' });
     }
 
-    // Calculate total amount for verification
-    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0) * 100; // Convert to paise
-    if (totalAmount !== Number(razorpayPayment.amount)) {
-      console.error(`Amount mismatch: expected ${totalAmount}, received ${razorpayPayment.amount}`);
+    // Calculate total amount in paisa (integer) for verification
+    // IMPORTANT: Use Math.round to handle floating point issues
+    const totalAmountInPaisa = Math.round(
+      payments.reduce((sum, payment) => sum + payment.amount * 100, 0)
+    );
+    const totalAmount = totalAmountInPaisa;
+    
+    // Ensure we're comparing integers
+    const razorpayAmountInPaisa = Number(razorpayPayment.amount);
+    
+    // Use a small tolerance for comparison to handle any potential rounding issues
+    if (Math.abs(totalAmountInPaisa - razorpayAmountInPaisa) > 1) {
+      console.error(`Amount mismatch: expected ${totalAmountInPaisa}, received ${razorpayAmountInPaisa}`);
       return res.status(400).json({ success: false, message: 'Payment amount does not match order total' });
     }
 
