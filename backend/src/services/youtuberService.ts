@@ -106,6 +106,6 @@ export class YoutuberService {
   }
 
   static calculateYouTubeAdCost(averageViews: number): number {
-    return YoutubeAdCostCalculator.calculateYouTubeAdCost(averageViews);
+    return YoutubeAdCostCalculator.calculateSingleAdCost(averageViews);
   }
 }
