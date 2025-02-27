@@ -17,7 +17,7 @@ export interface YoutuberProfile extends YoutuberSettings {
   id: string;
   channelName: string;
   isLive: boolean;
-  currentCCV: number;
+  averageViews: number;
   earnings: number;
   bankingDetails?: BankingDetails;
 }

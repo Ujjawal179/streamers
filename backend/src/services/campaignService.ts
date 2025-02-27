@@ -277,7 +277,7 @@ export class CampaignService {
       select: {
         id: true,
         name: true,
-        averageViews: true, // Use averageViews instead of currentCCV
+        averageViews: true, // Use averageViews instead of averageViews
         charge: true
       }
     });
@@ -361,7 +361,7 @@ export class CampaignService {
     if (!youtubers.length) {
       throw new ApiError(404, 'No YouTubers found with view data. Please ensure YouTubers have averageViews set.');
     }
-
+    console.log("%%%%%",youtubers)
     // 2. Calculate cost per view for each YouTuber and sort by efficiency
     const youtuberData: OptimalYoutuber[] = youtubers
       .map(y => ({
@@ -375,7 +375,7 @@ export class CampaignService {
         costPerView: y.averageViews && y.averageViews > 0 ? y.charge / y.averageViews : Infinity
       }))
       .sort((a, b) => a.costPerView - b.costPerView); // Sort by cost efficiency
-
+    console.log("#####",youtuberData)
     return this.calculateOptimalCombination(youtuberData, targetViews);
   }
 

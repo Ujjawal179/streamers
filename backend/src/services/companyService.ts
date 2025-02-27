@@ -17,7 +17,7 @@ export class CompanyService {
     // If requiredViews is provided, add additional filtering
     if (requiredViews) {
       Object.assign(where, {
-        currentCCV: {
+        averageViews: {
           gte: Math.ceil(requiredViews / 3) // Ensure YouTuber can deliver required views in max 3 plays
         }
       });
@@ -46,7 +46,7 @@ export class CompanyService {
     for (const youtuber of youtubers) {
       if (remainingViews <= 0) break;
 
-      const viewsPerPlay = youtuber.currentCCV || 0;
+      const viewsPerPlay = youtuber.averageViews || 0;
       if (viewsPerPlay <= 0) continue;
 
       const playsNeeded = Math.ceil(Math.min(remainingViews, viewsPerPlay * 3) / viewsPerPlay);
@@ -113,7 +113,7 @@ export class CompanyService {
     for (const youtuber of youtubers) {
       if (remainingViews <= 0 || totalCost >= budget) break;
 
-      const viewsPerPlay = youtuber.currentCCV || 0;
+      const viewsPerPlay = youtuber.averageViews || 0;
       if (viewsPerPlay <= 0) continue;
 
       const maxPlaysForBudget = Math.floor((budget - totalCost) / youtuber.charge);
