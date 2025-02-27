@@ -1,63 +1,224 @@
-// youtubeAdCostCalculator.ts
+interface CPMTier {
+  minCCV: number;
+  maxCCV: number;
+  cpm: number;
+  maxAdsPerStream: number;
+  minInterval: number;  // in minutes
+}
+
 export class YoutubeAdCostCalculator {
-    /**
-     * Calculates the YouTube ad cost based on total viewers, referencing the pricing structure
-     * from the provided Excel data. The cost is calculated as CPM (Cost Per Mille) * (totalViews / 1000).
-     * 
-     * @param totalViews The total number of viewers for the campaign/stream
-     * @param minAdBuy The minimum ad buy amount (optional, defaults to 1000 from the Excel)
-     * @param numberOfAdDisplays The number of ad displays (optional, defaults to 3 from the Excel)
-     * @returns The calculated ad cost in dollars
-     */
-    static calculateYouTubeAdCost(totalViews: number, minAdBuy: number = 10, numberOfAdDisplays: number = 1): number {
-      let cpm: number;
-  
-      // Determine CPM based on total viewers, following the patterns in the Excel
-      if (totalViews < 10000) {
-        cpm = 425; // Base CPM for lower viewer counts (e.g., Demo 1-4 in Excel)
-      } else if (totalViews < 50000) {
-        cpm = 400; // Medium viewer count CPM (e.g., Demo 5-8)
-      } else if (totalViews < 100000) {
-        cpm = 375; // Higher viewer count CPM (e.g., Demo 9-12)
-      } else {
-        cpm = 350; // Very high viewer count CPM (e.g., Demo 13-15)
-      }
-  
-      // Calculate base cost: CPM * (totalViews / 1000)
-      let baseCost = cpm * (totalViews / 1000);
-  
-      // Apply minimum ad buy if base cost is less than minAdBuy
-      if (baseCost < minAdBuy) {
-        baseCost = minAdBuy;
-      }
-  
-      // Factor in the number of ad displays (multiply by number of displays)
-      const finalCost = baseCost * numberOfAdDisplays;
-  
-      // Ensure the cost is rounded to 2 decimal places
-      return Number(finalCost.toFixed(2));
-    }
-  
-    /**
-     * Calculates the cost per view based on total viewers and the calculated ad cost
-     * 
-     * @param totalViews The total number of viewers
-     * @param minAdBuy The minimum ad buy amount (optional, defaults to 1000)
-     * @param numberOfAdDisplays The number of ad displays (optional, defaults to 3)
-     * @returns The cost per view in dollars
-     */
-    static calculateCostPerView(totalViews: number, minAdBuy: number = 1000, numberOfAdDisplays: number = 3): number {
-      const totalCost = this.calculateYouTubeAdCost(totalViews, minAdBuy, numberOfAdDisplays);
-      return Number((totalCost / totalViews).toFixed(6)); // Cost per view, rounded to 6 decimals
-    }
+  // Exact CPM tiers based on the provided table
+  private static CPM_TIERS: CPMTier[] = [
+    { minCCV: 1, maxCCV: 50, cpm: 275, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 51, maxCCV: 100, cpm: 300, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 101, maxCCV: 200, cpm: 325, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 201, maxCCV: 300, cpm: 350, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 301, maxCCV: 400, cpm: 375, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 401, maxCCV: 500, cpm: 400, maxAdsPerStream: 8, minInterval: 15 },
+    { minCCV: 501, maxCCV: 1000, cpm: 425, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 1001, maxCCV: 2000, cpm: 450, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 2001, maxCCV: 3000, cpm: 475, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 3001, maxCCV: 5000, cpm: 500, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 5001, maxCCV: 7500, cpm: 525, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 7501, maxCCV: 10000, cpm: 550, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 10001, maxCCV: 20000, cpm: 575, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 20001, maxCCV: 30000, cpm: 600, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 30001, maxCCV: 50000, cpm: 625, maxAdsPerStream: 16, minInterval: 7.5 },
+    { minCCV: 50001, maxCCV: 100000, cpm: 650, maxAdsPerStream: 16, minInterval: 7.5 },
+  ];
+
+  private static STREAM_CONSTANTS = {
+    AVERAGE_STREAM_TIME: 120, // 2 hours in minutes
+    MAX_AD_DURATION: 10, // seconds per ad
+    STREAMS_PER_MONTH: 30,
+    PLATFORM_FEE_PERCENTAGE: 30,
+  };
+
+  /**
+   * Gets the appropriate CPM tier for the given concurrent viewers count
+   */
+  static getCPMTier(ccv: number): CPMTier {
+    // Find the matching tier or use the highest tier for extremely high CCVs
+    const tier = this.CPM_TIERS.find(t => ccv >= t.minCCV && ccv <= t.maxCCV) || 
+                 this.CPM_TIERS[this.CPM_TIERS.length - 1];
+    return tier;
   }
-  
-  // Example usage (uncomment to test):
-  /*
-  console.log(YoutubeAdCostCalculator.calculateYouTubeAdCost(5000)); // Low viewers
-  console.log(YoutubeAdCostCalculator.calculateYouTubeAdCost(75000)); // Medium viewers
-  console.log(YoutubeAdCostCalculator.calculateYouTubeAdCost(150000)); // High viewers
-  console.log(YoutubeAdCostCalculator.calculateCostPerView(5000));
-  console.log(YoutubeAdCostCalculator.calculateCostPerView(75000));
-  console.log(YoutubeAdCostCalculator.calculateCostPerView(150000));
-  */
+
+  /**
+   * Calculates the cost for a single ad display based on concurrent viewers
+   */
+  static calculateSingleAdCost(ccv: number): number {
+    const tier = this.getCPMTier(ccv);
+    const cpv = tier.cpm / 1000; // Convert CPM to cost per view
+    return Math.round(ccv * cpv); // Cost for a single ad display
+  }
+
+  /**
+   * Calculates the streamer's income for a single stream
+   */
+  static calculateStreamIncome(ccv: number, useMaxAds: boolean = true): {
+    cpmRate: number;
+    maxAdsPerStream: number;
+    incomePerStream: number;
+    adsPerStream: number;
+    estimatedMonthlyIncome: number;
+    minAdInterval: number;
+    platformShare: number;
+    streamerShare: number;
+  } {
+    const tier = this.getCPMTier(ccv);
+    const cpv = tier.cpm / 1000; // Cost per view
+    
+    // Determine number of ads to calculate for
+    const adsPerStream = useMaxAds ? tier.maxAdsPerStream : Math.min(8, tier.maxAdsPerStream);
+    
+    // Calculate income for the stream
+    const totalStreamIncome = Math.round(ccv * cpv * adsPerStream);
+    
+    // Calculate platform and streamer shares
+    const platformShare = Math.round(totalStreamIncome * (this.STREAM_CONSTANTS.PLATFORM_FEE_PERCENTAGE / 100));
+    const streamerShare = totalStreamIncome - platformShare;
+    
+    // Calculate monthly income based on streams per month
+    const monthlyIncome = totalStreamIncome * this.STREAM_CONSTANTS.STREAMS_PER_MONTH;
+
+    return {
+      cpmRate: tier.cpm,
+      maxAdsPerStream: tier.maxAdsPerStream,
+      incomePerStream: totalStreamIncome,
+      adsPerStream,
+      estimatedMonthlyIncome: monthlyIncome,
+      minAdInterval: tier.minInterval,
+      platformShare,
+      streamerShare
+    };
+  }
+
+  /**
+   * Calculate cost for a campaign based on target views and selected streamers
+   */
+  static calculateCampaignCost(streamers: Array<{ ccv: number, adDisplays: number }>): {
+    totalCost: number;
+    totalViews: number;
+    breakdownByStreamer: Array<{ ccv: number, cost: number, views: number, cpm: number }>;
+  } {
+    let totalCost = 0;
+    let totalViews = 0;
+    const breakdown = streamers.map(streamer => {
+      const tier = this.getCPMTier(streamer.ccv);
+      const costPerAd = this.calculateSingleAdCost(streamer.ccv);
+      const totalStreamerCost = costPerAd * streamer.adDisplays;
+      const streamerViews = streamer.ccv * streamer.adDisplays;
+      
+      totalCost += totalStreamerCost;
+      totalViews += streamerViews;
+      
+      return {
+        ccv: streamer.ccv,
+        cost: totalStreamerCost,
+        views: streamerViews,
+        cpm: tier.cpm
+      };
+    });
+
+    return {
+      totalCost,
+      totalViews,
+      breakdownByStreamer: breakdown
+    };
+  }
+
+  /**
+   * Calculate how many ad displays are possible within a budget
+   */
+  static calculatePossibleAdsForBudget(ccv: number, budget: number): {
+    possibleAdDisplays: number;
+    totalViews: number;
+    costPerDisplay: number;
+    remainingBudget: number;
+    cpmRate: number;
+    recommendedStreams: number;
+  } {
+    const costPerDisplay = this.calculateSingleAdCost(ccv);
+    const possibleAdDisplays = Math.floor(budget / costPerDisplay);
+    const totalCost = possibleAdDisplays * costPerDisplay;
+    const remainingBudget = budget - totalCost;
+    const tier = this.getCPMTier(ccv);
+    
+    // Calculate recommended stream distribution
+    const maxAdsPerStream = tier.maxAdsPerStream;
+    const recommendedStreams = Math.ceil(possibleAdDisplays / maxAdsPerStream);
+
+    return {
+      possibleAdDisplays,
+      totalViews: ccv * possibleAdDisplays,
+      costPerDisplay,
+      remainingBudget,
+      cpmRate: tier.cpm,
+      recommendedStreams
+    };
+  }
+
+  /**
+   * Optimize ad distribution across multiple streamers for a target view count
+   */
+  static optimizeAdDistributionForViews(
+    targetViews: number, 
+    streamers: Array<{ id: string, name: string, ccv: number }>
+  ): {
+    selectedStreamers: Array<{ id: string, name: string, ccv: number, adDisplays: number, cost: number, views: number }>;
+    totalCost: number;
+    totalViews: number;
+  } {
+    // Sort streamers by efficiency (cost per view)
+    const sortedStreamers = [...streamers].sort((a, b) => {
+      const aCostPerView = this.calculateSingleAdCost(a.ccv) / a.ccv;
+      const bCostPerView = this.calculateSingleAdCost(b.ccv) / b.ccv;
+      return aCostPerView - bCostPerView; // Lowest cost per view first
+    });
+    
+    let remainingViews = targetViews;
+    let totalCost = 0;
+    let totalViews = 0;
+    const selectedStreamers: Array<{ 
+      id: string, name: string, ccv: number, adDisplays: number, cost: number, views: number 
+    }> = [];
+    
+    // Greedy algorithm to allocate ads
+    for (const streamer of sortedStreamers) {
+      if (remainingViews <= 0) break;
+      
+      const tier = this.getCPMTier(streamer.ccv);
+      const costPerAd = this.calculateSingleAdCost(streamer.ccv);
+      
+      // Calculate how many ads we need from this streamer
+      const neededAds = Math.ceil(remainingViews / streamer.ccv);
+      // Limit to max ads per stream (typically 8 or 16)
+      const maxAds = tier.maxAdsPerStream;
+      // Use what we need or max, whichever is less
+      const adDisplays = Math.min(neededAds, maxAds);
+      
+      const views = streamer.ccv * adDisplays;
+      const cost = costPerAd * adDisplays;
+      
+      selectedStreamers.push({
+        id: streamer.id,
+        name: streamer.name,
+        ccv: streamer.ccv,
+        adDisplays,
+        cost,
+        views
+      });
+      
+      remainingViews -= views;
+      totalCost += cost;
+      totalViews += views;
+    }
+    
+    return {
+      selectedStreamers,
+      totalCost,
+      totalViews
+    };
+  }
+}

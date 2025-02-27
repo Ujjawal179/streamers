@@ -104,13 +104,21 @@ export class CampaignController {
   }
 
   static async getCampaigns(req: Request, res: Response) {
-    const companyId = (req as any).user?.id;
-
+    const companyId = req.params.id;
+    console.log('Company ID:', companyId);
+  
     try {
       const campaigns = await CampaignService.getCampaignsByCompany(companyId);
-      res.json(campaigns);
+      res.json({
+        success: true,
+        data: campaigns
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch campaigns' });
+      console.log(error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch campaigns' 
+      });
     }
   }
 
@@ -193,7 +201,7 @@ export class CampaignController {
 
   static async createOptimalCampaign(req: Request, res: Response) {
     try {
-      const { name, description, targetViews, companyId, videoUrl, brandLink } = req.body;
+      const { name, description, targetViews, companyId, videoUrl } = req.body;
       
       // Validate required fields
       if (!name || !targetViews || !companyId || !videoUrl) {
@@ -211,7 +219,6 @@ export class CampaignController {
         targetViews,
         companyId,
         videoUrl,
-        brandLink
       });
 
       res.json({ success: true, data: result });

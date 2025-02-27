@@ -85,15 +85,51 @@ export class CampaignService {
   }
 
   static async getCampaignsByCompany(companyId: string) {
-    return prisma.campaign.findMany({
+    // Step 1: Fetch all campaigns and their youtubers in one query
+    const campaigns = await prisma.campaign.findMany({
       where: { companyId },
       include: {
-        youtubers: true,
+        youtubers: {
+          select: { id: true } // Only fetch youtuber IDs to reduce data
+        },
         donations: true
       }
     });
+  
+    // Step 2: Collect all youtuber IDs across all campaigns
+    const allYoutuberIds = campaigns.flatMap(campaign => 
+      campaign.youtubers.map(y => y.id)
+    );
+  
+    // Step 3: Fetch click totals for all youtubers in one query
+    const clickTotals = await prisma.chatMessage.groupBy({
+      by: ['youtuberId'],
+      where: {
+        youtuberId: {
+          in: allYoutuberIds
+        }
+      },
+      _sum: {
+        clicks: true
+      }
+    });
+  
+    // Step 4: Map click totals to campaigns
+    const clickMap = new Map(clickTotals.map(t => [t.youtuberId, t._sum.clicks || 0]));
+  
+    // Step 5: Combine results
+    const campaignsWithClicks = campaigns.map(campaign => {
+      const totalClicks = campaign.youtubers.reduce((sum, youtuber) => {
+        return sum + (clickMap.get(youtuber.id) || 0);
+      }, 0);
+      return {
+        ...campaign,
+        totalClicks
+      };
+    });
+  
+    return campaignsWithClicks;
   }
-
   static async updateCampaignStatus(id: string, status: Campaign['status']) {
     return prisma.campaign.update({
       where: { id },
@@ -394,10 +430,10 @@ export class CampaignService {
       const playsNeeded = Math.ceil(remainingViews / mostEfficient.averageViews);
       const actualPlays = Math.min(playsNeeded, 5); // Limit to max 5 plays per YouTuber
       
-      // Update the youtuber's contribution
+      // Store EXACT cost values (no rounding yet)
       mostEfficient.playsNeeded = actualPlays;
       mostEfficient.expectedViews = actualPlays * mostEfficient.averageViews;
-      mostEfficient.cost = actualPlays * mostEfficient.charge;
+      mostEfficient.cost = actualPlays * mostEfficient.charge; // Remove rounding
       
       // Update remaining views and total cost
       remainingViews -= mostEfficient.expectedViews;
@@ -414,10 +450,31 @@ export class CampaignService {
       throw new ApiError(400, 'Could not find a suitable combination of YouTubers');
     }
 
+    // Use integer math to avoid floating point issues
+    // First convert all costs to paisa (integer) for calculations
+    let totalPaisa = 0;
+    const displayYoutubers = selectedYoutubers.map(y => {
+      // Convert each youtuber's cost to paisa
+      const costInPaisa = Math.round(y.cost * 100);
+      totalPaisa += costInPaisa;
+      
+      return {
+        ...y,
+        // Store the integer cost in paisa
+        costInPaisa, 
+        // For display purposes, convert back to currency with 2 decimals
+        cost: costInPaisa / 100
+      };
+    });
+
+    const totalViewsExact = selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0);
+    const totalCostExact = totalPaisa / 100; // This is the exact amount in currency units
+
     return {
-      youtubers: selectedYoutubers,
-      totalViews: selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0),
-      totalCost: Math.round(selectedYoutubers.reduce((sum, y) => sum + y.cost, 0)) // Round to ensure integer
+      youtubers: displayYoutubers,
+      totalViews: totalViewsExact,
+      totalCost: totalCostExact, 
+      amountInPaisa: totalPaisa // This is the EXACT integer for Razorpay
     };
   }
 
@@ -440,7 +497,9 @@ export class CampaignService {
     }
 
     // Find optimal youtuber combination
-    const { youtubers, totalCost } = await this.findOptimalYoutuberCombination(data.targetViews);
+    const { youtubers, totalCost, amountInPaisa } = await this.findOptimalYoutuberCombination(data.targetViews);
+
+    // REMOVED the second calculation of amountInPaise
 
     return prisma.$transaction(async (prisma) => {
       // Create the campaign
@@ -448,7 +507,7 @@ export class CampaignService {
         data: {
           name: data.name,
           description: data.description,
-          budget: totalCost,
+          budget: totalCost, // Use the exact calculated amount
           targetViews: data.targetViews,
           companyId: data.companyId,
           status: 'ACTIVE',
@@ -459,9 +518,9 @@ export class CampaignService {
         },
       });
 
-      // Create Order in Razorpay
+      // Create Order in Razorpay with the EXACT integer amount
       const razorpayOrder = await razorpay.orders.create({
-        amount: totalCost * 100, // Razorpay expects amount in paise (₹ x 100)
+        amount: amountInPaisa, // Use the pre-calculated exact integer
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
         payment_capture: true
@@ -471,7 +530,8 @@ export class CampaignService {
       const payments = await Promise.all(youtubers.map(youtuber => 
         prisma.payment.create({
           data: {
-            amount: youtuber.cost,
+            // Use the exact cost for each youtuber (retrieve from costInPaisa)
+            amount: youtuber.costInPaisa ? youtuber.costInPaisa / 100 : youtuber.cost,
             companyId: data.companyId,
             youtuberId: youtuber.id,
             campaignId: campaign.id,

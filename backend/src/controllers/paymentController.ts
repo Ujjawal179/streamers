@@ -177,13 +177,16 @@ export const createPaymentOrderForCampaign = async (req: Request, res: Response)
 };
 
 export const verifyPayment = async (req: Request, res: Response) => {
+  console.log('Starting payment verification process', { orderId: req.body.orderId });
   const { orderId, paymentId, signature, videoData } = req.body;
 
   try {
     if (!orderId) {
+      console.log('Missing orderId in request body');
       return res.status(400).json({ success: false, message: 'Order ID is required' });
     }
 
+    console.log('Finding payment with orderId:', orderId);
     const payment = await prisma.payment.findUniqueOrThrow({
       where: { orderId: orderId },
       include: {
@@ -197,10 +200,14 @@ export const verifyPayment = async (req: Request, res: Response) => {
     });
 
     if (!payment) {
+      console.log('Payment not found for orderId:', orderId);
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
+    
+    console.log('Found payment:', { id: payment.id, companyId: payment.companyId, youtuberId: payment.youtuberId });
 
     // Verify signature
+    console.log('Verifying payment signature');
     const text = orderId + '|' + paymentId;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
@@ -208,6 +215,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
       .digest('hex');
 
     if (signature !== expectedSignature) {
+      console.log('Invalid signature', { expected: expectedSignature, received: signature });
       await prisma.payment.update({
         where: { orderId },
         data: { 
@@ -219,8 +227,12 @@ export const verifyPayment = async (req: Request, res: Response) => {
     }
 
     // Verify payment status with Razorpay
+    console.log('Fetching payment details from Razorpay', { paymentId });
     const razorpayPayment = await razorpay.payments.fetch(paymentId);
+    console.log('Razorpay payment details:', { status: razorpayPayment.status, amount: razorpayPayment.amount });
+    
     if (razorpayPayment.status !== 'captured') {
+      console.log('Payment not captured', { razorpayStatus: razorpayPayment.status });
       await prisma.payment.update({
         where: { orderId },
         data: { 
@@ -234,15 +246,27 @@ export const verifyPayment = async (req: Request, res: Response) => {
     // Calculate platform fee and YouTuber earnings
     const platformFee = Math.floor(Number(razorpayPayment.amount) * 0.3); // 30% platform fee
     const earnings = Number(razorpayPayment.amount) - platformFee;
+    console.log('Payment calculations', { 
+      total: razorpayPayment.amount, 
+      platformFee, 
+      earnings 
+    });
 
     let paymentStatus: PaymentStatus = PaymentStatus.PROCESSING;
     let paymentMessage = 'Payment received but processing';
 
     // Verify YouTuber's bank details before attempting payout
+    console.log('Checking YouTuber bank details', { 
+      bankVerified: payment.youtuber.bankVerified,
+      hasBankInfo: Boolean(payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode)
+    });
+    
     if (!payment.youtuber.bankVerified) {
+      console.log('YouTuber bank not verified');
       paymentMessage = 'Payment received but payout pending - Bank details not verified';
     } else if (payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode) {
       try {
+        console.log('Attempting payout to YouTuber');
         const payoutResponse = await axios.post(
           'https://api.razorpay.com/v1/payouts',
           {
@@ -267,8 +291,10 @@ export const verifyPayment = async (req: Request, res: Response) => {
             }
           }
         );
+        console.log('Payout response:', payoutResponse.data);
 
         // Update YouTuber's earnings
+        console.log('Updating YouTuber earnings');
         await prisma.youtuber.update({
           where: { id: payment.youtuberId },
           data: {
@@ -282,11 +308,13 @@ export const verifyPayment = async (req: Request, res: Response) => {
         paymentMessage = 'Payment processed successfully';
       } catch (payoutError) {
         console.error('Payout failed:', payoutError);
+        console.log('Error details:', payoutError|| 'No response data');
         paymentMessage = 'Payment received but payout failed - Will retry automatically';
       }
     }
 
     // Update payment status regardless of video upload
+    console.log('Updating payment status to', paymentStatus);
     await prisma.payment.update({
       where: { orderId },
       data: {
@@ -298,11 +326,20 @@ export const verifyPayment = async (req: Request, res: Response) => {
     });
 
     let videoUploadStatus = null;
-    console.log('Uploading video',videoData.url, payment.playsNeeded)
+    console.log('Checking for video upload', {
+      hasVideoUrl: Boolean(videoData?.url),
+      playsNeeded: payment.playsNeeded
+    });
     
     // Handle video upload separately if payment is at least in processing state
     if (videoData?.url && payment.playsNeeded > 0) {
       try {
+        console.log('Uploading video to YouTuber queue', {
+          youtuberId: payment.youtuberId,
+          url: videoData.url,
+          playsNeeded: payment.playsNeeded
+        });
+        
         await VideoQueueService.uploadVideoToYoutuberWithPlays(
           payment.youtuberId,
           {
@@ -313,12 +350,14 @@ export const verifyPayment = async (req: Request, res: Response) => {
           payment.playsNeeded
         );
         videoUploadStatus = { success: true, message: 'Video uploaded successfully' };
+        console.log('Video uploaded successfully');
       } catch (error) {
         console.error('Video upload error:', error);
         videoUploadStatus = { success: false, message: 'Failed to upload video after payment' };
       }
     }
 
+    console.log('Payment verification completed successfully');
     res.json({
       success: true,
       message: paymentMessage,
@@ -338,14 +377,17 @@ export const verifyPayment = async (req: Request, res: Response) => {
 };
 
 export const verifyBulkPayment = async (req: Request, res: Response) => {
+  console.log('Starting bulk payment verification', { orderId: req.body.orderId });
   const { orderId, paymentId, signature, videoData } = req.body;
 
   try {
     if (!orderId) {
+      console.log('Missing orderId in request');
       return res.status(400).json({ success: false, message: 'Order ID is required' });
     }
 
     // Find all payments with the given order ID
+    console.log('Finding payments for orderId:', orderId);
     const payments = await prisma.payment.findMany({
       where: { orderId: orderId },
       include: {
@@ -359,11 +401,14 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       }
     });
 
+    console.log('Found payments:', payments.length);
     if (!payments || payments.length === 0) {
+      console.log('No payments found for orderId:', orderId);
       return res.status(404).json({ success: false, message: 'No payments found for this order' });
     }
 
     // Verify signature
+    console.log('Verifying payment signature');
     const text = orderId + '|' + paymentId;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
@@ -371,6 +416,7 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       .digest('hex');
 
     if (signature !== expectedSignature) {
+      console.log('Invalid signature', { expected: expectedSignature, received: signature });
       await prisma.payment.updateMany({
         where: { orderId },
         data: { 
@@ -382,8 +428,12 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
     }
 
     // Verify payment status with Razorpay
+    console.log('Fetching payment details from Razorpay', { paymentId });
     const razorpayPayment = await razorpay.payments.fetch(paymentId);
+    console.log('Razorpay payment details:', { status: razorpayPayment.status, amount: razorpayPayment.amount });
+    
     if (razorpayPayment.status !== 'captured') {
+      console.log('Payment not captured', { razorpayStatus: razorpayPayment.status });
       await prisma.payment.updateMany({
         where: { orderId },
         data: { 
@@ -394,15 +444,31 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Payment not captured' });
     }
 
-    // Calculate total amount for verification
-    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0) * 100; // Convert to paise
-    if (totalAmount !== Number(razorpayPayment.amount)) {
-      console.error(`Amount mismatch: expected ${totalAmount}, received ${razorpayPayment.amount}`);
+    // Calculate total amount in paisa (integer) for verification
+    // IMPORTANT: Use Math.round to handle floating point issues
+    const totalAmountInPaisa = Math.round(
+      payments.reduce((sum, payment) => sum + payment.amount * 100, 0)
+    );
+    const totalAmount = totalAmountInPaisa;
+    
+    // Ensure we're comparing integers
+    const razorpayAmountInPaisa = Number(razorpayPayment.amount);
+    
+    console.log('Verifying payment amount', { 
+      totalAmountInPaisa, 
+      razorpayAmountInPaisa,
+      difference: totalAmountInPaisa - razorpayAmountInPaisa
+    });
+    
+    // Use a small tolerance for comparison to handle any potential rounding issues
+    if (Math.abs(totalAmountInPaisa - razorpayAmountInPaisa) > 1) {
+      console.error(`Amount mismatch: expected ${totalAmountInPaisa}, received ${razorpayAmountInPaisa}`);
       return res.status(400).json({ success: false, message: 'Payment amount does not match order total' });
     }
 
     // Get campaign details for video upload if available
     const campaignId = payments[0].campaignId;
+    console.log('Checking for campaign details', { campaignId });
     let campaignDetails = null;
     
     if (campaignId) {
@@ -410,10 +476,14 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
         where: { id: campaignId },
         select: { brandLink: true, description: true, name: true }
       });
+      console.log('Found campaign details:', campaignDetails);
     }
 
     // Process each payment
+    console.log(`Processing ${payments.length} payments`);
     const results = await Promise.all(payments.map(async (payment) => {
+      console.log(`Processing payment ${payment.id} for YouTuber ${payment.youtuberId}`);
+      
       // Calculate platform fee and earnings for this specific payment
       const paymentAmount = payment.amount * 100; // Convert to paise
       const paymentShare = paymentAmount / totalAmount;
@@ -421,13 +491,51 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       const platformFee = Math.floor(paymentAmountReceived * 0.3); // 30% platform fee
       const earnings = paymentAmountReceived - platformFee;
       
+      console.log('Payment calculations', {
+        paymentId: payment.id,
+        paymentAmount,
+        paymentShare,
+        paymentAmountReceived,
+        platformFee,
+        earnings
+      });
+      
       try {
         // If YouTuber's bank is verified, attempt payout
-        if (payment.youtuber.bankVerified && 
-            payment.youtuber.bankName && 
-            payment.youtuber.accountNumber && 
-            payment.youtuber.ifscCode) {
-          try {
+        console.log('Checking YouTuber bank details', {
+          bankVerified: payment.youtuber.bankVerified,
+          hasBankInfo: Boolean(payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode)
+        });
+        
+        // Default payment status
+        let paymentStatus: PaymentStatus = PaymentStatus.PROCESSING;
+        console.log('Processing payment', { paymentId: payment.id });
+
+        // Update payment record with transaction details
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: paymentStatus,
+            transactionId: paymentId,
+            earnings: earnings / 100, // Convert back to base currency
+            platformFee: platformFee / 100 // Convert back to base currency
+          }
+        });
+
+        // Attempt payout if bank details are complete and verified
+        const bankDetailsComplete = payment.youtuber.bankVerified && 
+          payment.youtuber.bankName && 
+          payment.youtuber.accountNumber && 
+          payment.youtuber.ifscCode;
+
+        try {
+          if (bankDetailsComplete) {
+            console.log('Attempting payout to YouTuber', {
+              paymentId: payment.id,
+              youtuberId: payment.youtuberId,
+              amount: earnings
+            });
+            
             const payoutResponse = await axios.post(
               'https://api.razorpay.com/v1/payouts',
               {
@@ -452,8 +560,14 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
                 }
               }
             );
+            console.log('Payout response:', payoutResponse.data);
 
             // Update YouTuber's earnings
+            console.log('Updating YouTuber earnings', {
+              youtuberId: payment.youtuberId,
+              earnings: earnings / 100
+            });
+            
             await prisma.youtuber.update({
               where: { id: payment.youtuberId },
               data: {
@@ -464,75 +578,56 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
             });
 
             // Update payment status to PAID
+            paymentStatus = PaymentStatus.PAID;
+            console.log('Updating payment status to PAID', { paymentId: payment.id });
             await prisma.payment.update({
               where: { id: payment.id },
-              data: {
-                status: PaymentStatus.PAID,
-                transactionId: paymentId,
-                earnings: earnings / 100, // Convert back to base currency
-                platformFee: platformFee / 100 // Convert back to base currency
-              }
+              data: { status: PaymentStatus.PAID }
             });
-
-            // Upload videos if video data is provided
-            if (videoData && videoData.url && payment.playsNeeded > 0) {
-              // Prepare video message if campaign has brandLink
-              let message = null;
-              if (campaignDetails && campaignDetails.description) {
-                message = `${campaignDetails.description || 'Thank you for watching!'}`;
-              }
-
-              // Upload video to YouTuber's queue with optional campaign message
-              await VideoQueueService.uploadVideoToYoutuberWithPlays(
-                payment.youtuberId,
-                {
-                  url: videoData.url,
-                  paymentId: payment.id,
-                  campaignId: payment.campaignId,
-                  message,
-                  ...videoData
-                },
-                payment.playsNeeded
-              );
-
-              return { 
-                id: payment.id, 
-                status: payment.status, 
-                success: true,
-                videosUploaded: payment.playsNeeded
-              };
-            }
-
-            return { id: payment.id, status: 'PAID', success: true };
-          } catch (payoutError) {
-            console.error(`Payout failed for payment ${payment.id}:`, payoutError);
-            
-            // Update payment to PROCESSING status
-            await prisma.payment.update({
-              where: { id: payment.id },
-              data: {
-                status: PaymentStatus.PROCESSING,
-                transactionId: paymentId,
-                earnings: earnings / 100,
-                platformFee: platformFee / 100
-              }
-            });
-            
-            return { id: payment.id, status: 'PROCESSING', error: 'Payout failed' };
+          } else {
+            console.log('Bank details not verified or missing', { paymentId: payment.id });
           }
-        } else {
-          // Bank details not verified or missing
-          await prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-              status: PaymentStatus.PROCESSING,
-              transactionId: paymentId,
-              earnings: earnings / 100,
-              platformFee: platformFee / 100
-            }
-          });
           
-          return { id: payment.id, status: 'PROCESSING', error: 'Bank details not verified' };
+          // Upload videos if video data is provided
+          if (videoData && videoData.url && payment.playsNeeded > 0) {
+            console.log('Uploading video for payment', {
+              paymentId: payment.id,
+              videoUrl: videoData.url,
+              playsNeeded: payment.playsNeeded
+            });
+            
+            // Prepare video message if campaign has description
+            let message = null;
+            if (campaignDetails && campaignDetails.description) {
+              message = `${campaignDetails.description || 'Thank you for watching!'}`;
+            }
+
+            // Upload video to YouTuber's queue with optional campaign message
+            await VideoQueueService.uploadVideoToYoutuberWithPlays(
+              payment.youtuberId,
+              {
+                url: videoData.url,
+                paymentId: payment.id,
+                campaignId: payment.campaignId,
+                message,
+                ...videoData
+              },
+              payment.playsNeeded
+            );
+            console.log('Video uploaded successfully');
+
+            return { 
+              id: payment.id, 
+              status: paymentStatus, 
+              success: true,
+              videosUploaded: payment.playsNeeded
+            };
+          }
+
+          return { id: payment.id, status: paymentStatus, success: true };
+        } catch (processingError) {
+          console.error(`Processing failed for payment ${payment.id}:`, processingError);
+          return { id: payment.id, status: paymentStatus, error: 'Processing failed' };
         }
       } catch (error) {
         console.error(`Error processing payment ${payment.id}:`, error);
@@ -552,6 +647,7 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
               },
               payment.playsNeeded
             );
+            console.log('Video upload retry succeeded');
           }
           
           return { 
@@ -572,6 +668,11 @@ export const verifyBulkPayment = async (req: Request, res: Response) => {
       }
     }));
 
+    console.log('Bulk payment processing completed', {
+      successCount: results.filter(r => r.success).length,
+      totalCount: results.length
+    });
+    
     res.json({
       success: true,
       message: 'Bulk payment processed',

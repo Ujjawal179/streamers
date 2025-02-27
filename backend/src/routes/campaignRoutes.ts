@@ -5,7 +5,7 @@ const router = Router();
 
 router.post('/calculate', CampaignController.calculateCampaign);
 router.post('/create', CampaignController.createCampaign);
-router.get('/', CampaignController.getCampaigns);
+router.get('/getall/:id', CampaignController.getCampaigns);
 router.get('/:id', CampaignController.getCampaign);
 router.get('/:id/analytics', CampaignController.getCampaignAnalytics);
 router.patch('/:id', CampaignController.updateCampaign);
