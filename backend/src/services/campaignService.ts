@@ -7,12 +7,22 @@ import Razorpay from 'razorpay';
 import { VideoQueueService } from './VideoQueueService';
 import  {SingleYoutuberCampaignInput } from '../interfaces/ICampaign';
 
+// New interface for optimal youtuber selection
+interface OptimalYoutuber {
+  id: string;
+  name: string | null;
+  averageViews: number;
+  charge: number;
+  playsNeeded: number;
+  expectedViews: number;
+  cost: number;
+  costPerView: number;
+}
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
   key_secret: process.env.RAZORPAY_KEY_SECRET || ''
 });
-
-
 
 export class CampaignService {
   static async createCampaign(data: {
@@ -209,8 +219,19 @@ export class CampaignService {
         }
       });
 
+
+      // Create Order in Razorpay
+      const razorpayOrder = await razorpay.orders.create({
+        amount: input.budget * 100, // Razorpay expects amount in paise (₹ x 100)
+        currency: "INR",
+        receipt: `receipt_${Date.now()}`,
+        payment_capture: true // Auto-capture payment
+      });
+
+
+
       // 2. Create payment records and queue videos for each YouTuber
-      const results = await Promise.all(
+      await Promise.all(
         input.youtubers.map(async (youtuber) => {
           // Create payment
           const payment = await prisma.payment.create({
@@ -223,26 +244,26 @@ export class CampaignService {
               status: 'PENDING',
               earnings: youtuber.cost * 0.7,
               platformFee: youtuber.cost * 0.3,
-              orderId: `order_${Date.now()}_${youtuber.id}`
+              orderId: razorpayOrder.id,
             }
           });
 
-          // Queue video for each required play
-          await VideoQueueService.uploadVideoToYoutuberWithPlays(
-            youtuber.id,
-            {
-              url: input.videoUrl,
-              campaignId: campaign.id,
-              paymentId: payment.id
-            },
-            youtuber.playsNeeded
-          );
+          // // Queue video for each required play
+          // await VideoQueueService.uploadVideoToYoutuberWithPlays(
+          //   youtuber.id,
+          //   {
+          //     url: input.videoUrl,
+          //     campaignId: campaign.id,
+          //     paymentId: payment.id
+          //   },
+          //   youtuber.playsNeeded
+          // );
 
           return { youtuberId: youtuber.id, payment, playsNeeded: youtuber.playsNeeded };
         })
       );
 
-      return { campaign, results };
+      return { campaign, orderId: razorpayOrder.id };
     });
   }
 
@@ -256,7 +277,7 @@ export class CampaignService {
       select: {
         id: true,
         name: true,
-        currentCCV: true,
+        averageViews: true, // Use averageViews instead of averageViews
         charge: true
       }
     });
@@ -265,7 +286,9 @@ export class CampaignService {
       throw new ApiError(404, 'YouTuber not found');
     }
 
-    const totalCost = youtuber.charge * input.playsNeeded;
+    // Calculate total cost based on YouTuber's charge and plays needed
+    // Ensure the cost is an integer to avoid decimal values in payment
+    const totalCost = Math.round(youtuber.charge * input.playsNeeded);
 
     return prisma.$transaction(async (prisma) => {
       const campaign = await prisma.campaign.create({
@@ -273,7 +296,7 @@ export class CampaignService {
           name: input.name,
           description: input.description,
           budget: totalCost,
-          targetViews: (youtuber.currentCCV || 0) * input.playsNeeded,
+          targetViews: (youtuber.averageViews || 0) * input.playsNeeded, // Use averageViews
           companyId: input.companyId,
           status: 'ACTIVE',
           brandLink: input.brandLink,
@@ -306,17 +329,168 @@ export class CampaignService {
         }
       });
 
-      await VideoQueueService.uploadVideoToYoutuberWithPlays(
-        youtuber.id,
-        {
-          url: input.videoUrl,
-          campaignId: campaign.id,
-          paymentId: payment.id
-        },
-        input.playsNeeded
-      );
+      // await VideoQueueService.uploadVideoToYoutuberWithPlays(
+      //   youtuber.id,
+      //   {
+      //     url: input.videoUrl,
+      //     campaignId: campaign.id,
+      //     paymentId: payment.id
+      //   },
+      //   input.playsNeeded
+      // );
 
       return { campaign, payment };
+    });
+  }
+
+  // Simplified method to find optimal youtuber combinations using only averageViews
+  static async findOptimalYoutuberCombination(targetViews: number) {
+    // 1. Fetch all active YouTubers with their stats
+    const youtubers = await prisma.youtuber.findMany({
+      where: { 
+        averageViews: { gt: 0 } // Only using averageViews
+      },
+      select: {
+        id: true,
+        name: true,
+        averageViews: true,
+        charge: true
+      }
+    });
+
+    if (!youtubers.length) {
+      throw new ApiError(404, 'No YouTubers found with view data. Please ensure YouTubers have averageViews set.');
+    }
+    console.log("%%%%%",youtubers)
+    // 2. Calculate cost per view for each YouTuber and sort by efficiency
+    const youtuberData: OptimalYoutuber[] = youtubers
+      .map(y => ({
+        id: y.id,
+        name: y.name,
+        averageViews: y.averageViews || 0,
+        charge: y.charge || 0,
+        playsNeeded: 0,
+        expectedViews: 0,
+        cost: 0,
+        costPerView: y.averageViews && y.averageViews > 0 ? y.charge / y.averageViews : Infinity
+      }))
+      .sort((a, b) => a.costPerView - b.costPerView); // Sort by cost efficiency
+    console.log("#####",youtuberData)
+    return this.calculateOptimalCombination(youtuberData, targetViews);
+  }
+
+  // Helper method to calculate optimal combination (extracted to avoid code duplication)
+  private static calculateOptimalCombination(youtuberData: OptimalYoutuber[], targetViews: number) {
+    // 3. Greedy algorithm to select YouTubers
+    let remainingViews = targetViews;
+    let totalCost = 0;
+
+    // Loop until we meet or exceed the target views
+    while (remainingViews > 0 && youtuberData.some(y => y.averageViews > 0)) {
+      // Find the most cost-effective YouTuber
+      const mostEfficient = youtuberData.find(y => y.averageViews > 0) as OptimalYoutuber;
+      
+      // Calculate how many plays we need from this YouTuber
+      const playsNeeded = Math.ceil(remainingViews / mostEfficient.averageViews);
+      const actualPlays = Math.min(playsNeeded, 5); // Limit to max 5 plays per YouTuber
+      
+      // Update the youtuber's contribution
+      mostEfficient.playsNeeded = actualPlays;
+      mostEfficient.expectedViews = actualPlays * mostEfficient.averageViews;
+      mostEfficient.cost = actualPlays * mostEfficient.charge;
+      
+      // Update remaining views and total cost
+      remainingViews -= mostEfficient.expectedViews;
+      totalCost += mostEfficient.cost;
+      
+      // Remove this YouTuber from further consideration
+      mostEfficient.averageViews = 0;
+    }
+
+    // Filter out YouTubers that weren't selected
+    const selectedYoutubers = youtuberData.filter(y => y.playsNeeded > 0);
+    
+    if (selectedYoutubers.length === 0) {
+      throw new ApiError(400, 'Could not find a suitable combination of YouTubers');
+    }
+
+    return {
+      youtubers: selectedYoutubers,
+      totalViews: selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0),
+      totalCost: Math.round(selectedYoutubers.reduce((sum, y) => sum + y.cost, 0)) // Round to ensure integer
+    };
+  }
+
+  // New campaign creation method based on target views
+  static async createCampaignByViews(data: {
+    name: string;
+    description?: string;
+    targetViews: number;
+    companyId: string;
+    videoUrl: string;
+    brandLink?: string;
+  }) {
+    // First check if company exists
+    const company = await prisma.company.findUnique({
+      where: { id: data.companyId }
+    });
+
+    if (!company) {
+      throw new ApiError(404, 'Company not found');
+    }
+
+    // Find optimal youtuber combination
+    const { youtubers, totalCost } = await this.findOptimalYoutuberCombination(data.targetViews);
+
+    return prisma.$transaction(async (prisma) => {
+      // Create the campaign
+      const campaign = await prisma.campaign.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          budget: totalCost,
+          targetViews: data.targetViews,
+          companyId: data.companyId,
+          status: 'ACTIVE',
+          brandLink: data.brandLink,
+          youtubers: {
+            connect: youtubers.map(y => ({ id: y.id }))
+          }
+        },
+      });
+
+      // Create Order in Razorpay
+      const razorpayOrder = await razorpay.orders.create({
+        amount: totalCost * 100, // Razorpay expects amount in paise (₹ x 100)
+        currency: "INR",
+        receipt: `receipt_${Date.now()}`,
+        payment_capture: true
+      });
+
+      // Create payment records for each youtuber
+      const payments = await Promise.all(youtubers.map(youtuber => 
+        prisma.payment.create({
+          data: {
+            amount: youtuber.cost,
+            companyId: data.companyId,
+            youtuberId: youtuber.id,
+            campaignId: campaign.id,
+            playsNeeded: youtuber.playsNeeded,
+            status: 'PENDING',
+            earnings: youtuber.cost * 0.7, // 70% for youtuber
+            platformFee: youtuber.cost * 0.3, // 30% platform fee
+            orderId: razorpayOrder.id
+          }
+        })
+      ));
+
+      return { 
+        campaign, 
+        payments, 
+        selectedYoutubers: youtubers, 
+        orderId: razorpayOrder.id,
+        totalCost
+      };
     });
   }
 }

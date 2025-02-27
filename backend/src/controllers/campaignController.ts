@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { CompanyService } from '../services/companyService';
 import { CampaignService } from '../services/campaignService';
 import { ApiError } from '../utils/ApiError';
+import { ApiResponse } from '../utils/ApiResponse';
 
 export class CampaignController {
   // Calculate campaign costs and YouTuber distribution
@@ -56,6 +57,7 @@ export class CampaignController {
 
       res.json({ success: true, data: result });
     } catch (error) {
+      console.log(error)
       if (error instanceof ApiError) {
         res.status(error.statusCode).json({ 
           success: false, 
@@ -168,4 +170,140 @@ export class CampaignController {
       res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
     }
   }
+
+  // Add these methods to the controller class
+  static async getOptimalYoutubers(req: Request, res: Response) {
+    try {
+      const { targetViews } = req.body;
+      
+      if (!targetViews || targetViews <= 0) {
+        return res.status(400).json({ success: false, error: 'Valid target views required' });
+      }
+
+      const estimate = await CampaignService.findOptimalYoutuberCombination(targetViews);
+      res.json({ success: true, data: estimate });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ success: false, error: error.message });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to estimate campaign' });
+      }
+    }
+  }
+
+  static async createOptimalCampaign(req: Request, res: Response) {
+    try {
+      const { name, description, targetViews, companyId, videoUrl, brandLink } = req.body;
+      
+      // Validate required fields
+      if (!name || !targetViews || !companyId || !videoUrl) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      
+      if (targetViews <= 0) {
+        return res.status(400).json({ success: false, error: 'Target views must be greater than 0' });
+      }
+
+      // Changed to call the correct method
+      const result = await CampaignService.createCampaignByViews({
+        name,
+        description,
+        targetViews,
+        companyId,
+        videoUrl,
+        brandLink
+      });
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof ApiError) {
+        res.status(error.statusCode).json({ success: false, error: error.message });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create campaign',
+          details: (error as Error).message
+        });
+      }
+    }
+  }
 }
+
+// Create campaign by views
+export const createCampaignByViews = async (req: Request, res: Response) => {
+  try {
+    const { name, description, targetViews, companyId, videoUrl, brandLink } = req.body;
+    
+    // Validate required fields
+    if (!name || !targetViews || !companyId || !videoUrl) {
+      throw new ApiError(400, 'Missing required fields');
+    }
+    
+    if (targetViews <= 0) {
+      throw new ApiError(400, 'Target views must be greater than 0');
+    }
+
+    const result = await CampaignService.createCampaignByViews({
+      name,
+      description,
+      targetViews,
+      companyId,
+      videoUrl,
+      brandLink
+    });
+
+    return res.json(
+      new ApiResponse(
+        201,
+        result,
+        'Campaign created successfully with optimal youtuber selection'
+      )
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: (error as Error).message
+    });
+  }
+};
+
+// Optional: Function to get an estimate before creating the campaign
+export const getYoutuberEstimate = async (req: Request, res: Response) => {
+  try {
+    const { targetViews } = req.body;
+    
+    if (!targetViews || targetViews <= 0) {
+      throw new ApiError(400, 'Valid target views required');
+    }
+
+    const estimate = await CampaignService.findOptimalYoutuberCombination(targetViews);
+
+    return res.json(
+      new ApiResponse(
+        200,
+        estimate,
+        'Estimated campaign cost and youtuber selection'
+      )
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: (error as Error).message
+    });
+  }
+};

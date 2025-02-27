@@ -103,8 +103,9 @@ export class YoutuberController {
       }
   
       const channelLink = youtuber.channelLink[0];
+      console.log('channellink:', channelLink);
       const channelId = await YoutuberController.nightbotService.getChannelIdByUsername(channelLink);
-  
+      console.log('channelId:', channelId);
       if (!channelId) {
         return res.status(400).json({ success: false, error: 'Could not derive channel ID from channel link' });
       }

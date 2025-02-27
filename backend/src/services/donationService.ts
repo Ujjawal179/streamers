@@ -31,18 +31,18 @@ export class DonationService {
       where: { id: data.youtuberId }
     });
 
-    if (youtuber?.currentCCV) {
+    if (youtuber?.averageViews) {
       // Calculate CPM based revenue
-      const cpmRate = CampaignService.calculateCPMRate(youtuber.currentCCV);
-      const revenue = (cpmRate.cpmRate * youtuber.currentCCV) / 1000;
+      const cpmRate = CampaignService.calculateCPMRate(youtuber.averageViews);
+      const revenue = (cpmRate.cpmRate * youtuber.averageViews) / 1000;
 
       // Create analytics record
       await prisma.streamAnalytics.create({
         data: {
           youtuberId: data.youtuberId,
           streamId: youtuber.currentStreamId || 'unknown',
-          averageCCV: youtuber.currentCCV,
-          peakCCV: youtuber.currentCCV,
+          averageCCV: youtuber.averageViews,
+          peakCCV: youtuber.averageViews,
           adsPlayed: 1,
           revenue,
           timestamp: new Date()
@@ -50,7 +50,7 @@ export class DonationService {
       });
 
       // Update campaign metrics
-      await CampaignService.updateCampaignMetrics(data.campaignId, youtuber.currentCCV, revenue);
+      await CampaignService.updateCampaignMetrics(data.campaignId, youtuber.averageViews, revenue);
     }
 
     // 4. Adds to YouTuber's queue

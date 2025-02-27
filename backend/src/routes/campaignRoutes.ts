@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CampaignController } from '../controllers/campaignController';
+import { CampaignController, createCampaignByViews, getYoutuberEstimate } from '../controllers/campaignController';
 
 const router = Router();
 
@@ -11,5 +11,9 @@ router.get('/:id/analytics', CampaignController.getCampaignAnalytics);
 router.patch('/:id', CampaignController.updateCampaign);
 router.delete('/:id', CampaignController.deleteCampaign);
 router.post('/single-youtuber', CampaignController.createSingleYoutuberCampaign);  // Updated route name
+
+
+router.post('/optimal-estimate', CampaignController.getOptimalYoutubers);
+router.post('/create-optimal', CampaignController.createOptimalCampaign);
 
 export default router;
