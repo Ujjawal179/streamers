@@ -394,10 +394,10 @@ export class CampaignService {
       const playsNeeded = Math.ceil(remainingViews / mostEfficient.averageViews);
       const actualPlays = Math.min(playsNeeded, 5); // Limit to max 5 plays per YouTuber
       
-      // Update the youtuber's contribution
+      // Store EXACT cost values (no rounding yet)
       mostEfficient.playsNeeded = actualPlays;
       mostEfficient.expectedViews = actualPlays * mostEfficient.averageViews;
-      mostEfficient.cost = actualPlays * mostEfficient.charge;
+      mostEfficient.cost = actualPlays * mostEfficient.charge; // Remove rounding
       
       // Update remaining views and total cost
       remainingViews -= mostEfficient.expectedViews;
@@ -414,10 +414,21 @@ export class CampaignService {
       throw new ApiError(400, 'Could not find a suitable combination of YouTubers');
     }
 
+    // Use EXACT values for calculations
+    const totalViewsExact = selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0);
+    const totalCostExact = selectedYoutubers.reduce((sum, y) => sum + y.cost, 0);
+    
+    // For display in the UI, create rounded versions of the costs
+    const displayYoutubers = selectedYoutubers.map(y => ({
+      ...y,
+      cost: Math.round(y.cost * 100) / 100, // Round to 2 decimal places for display only
+    }));
+
     return {
-      youtubers: selectedYoutubers,
-      totalViews: selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0),
-      totalCost: Math.round(selectedYoutubers.reduce((sum, y) => sum + y.cost, 0)) // Round to ensure integer
+      youtubers: displayYoutubers,
+      totalViews: totalViewsExact,
+      totalCost: totalCostExact, // Return exact cost for payment processing
+      displayCost: Math.round(totalCostExact * 100) / 100 // Rounded for display
     };
   }
 
@@ -442,6 +453,9 @@ export class CampaignService {
     // Find optimal youtuber combination
     const { youtubers, totalCost } = await this.findOptimalYoutuberCombination(data.targetViews);
 
+    // Calculate the exact amount in paise for Razorpay (integer)
+    const amountInPaise = Math.round(totalCost * 100);
+
     return prisma.$transaction(async (prisma) => {
       // Create the campaign
       const campaign = await prisma.campaign.create({
@@ -459,9 +473,9 @@ export class CampaignService {
         },
       });
 
-      // Create Order in Razorpay
+      // Create Order in Razorpay with exact integer amount in paise
       const razorpayOrder = await razorpay.orders.create({
-        amount: totalCost * 100, // Razorpay expects amount in paise (₹ x 100)
+        amount: amountInPaise, // Use the exact amount in paise
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
         payment_capture: true
