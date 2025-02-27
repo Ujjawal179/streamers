@@ -416,7 +416,11 @@ export class CampaignService {
 
     // Use EXACT values for calculations
     const totalViewsExact = selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0);
-    const totalCostExact = selectedYoutubers.reduce((sum, y) => sum + y.cost, 0);
+    
+    // Calculate the total cost and convert to a clean integer in paisa to avoid floating point issues
+    const totalCostRaw = selectedYoutubers.reduce((sum, y) => sum + y.cost, 0);
+    const totalCostInPaisa = Math.round(totalCostRaw * 100);
+    const totalCostExact = totalCostInPaisa / 100; // Convert back to currency units as a clean value
     
     // For display in the UI, create rounded versions of the costs
     const displayYoutubers = selectedYoutubers.map(y => ({
@@ -427,8 +431,9 @@ export class CampaignService {
     return {
       youtubers: displayYoutubers,
       totalViews: totalViewsExact,
-      totalCost: totalCostExact, // Return exact cost for payment processing
-      displayCost: Math.round(totalCostExact * 100) / 100 // Rounded for display
+      totalCost: totalCostExact, // Clean value without floating point errors
+      displayCost: Math.round(totalCostExact * 100) / 100, // Rounded for display
+      amountInPaisa: totalCostInPaisa // Store exact paisa amount to use for Razorpay
     };
   }
 
@@ -451,7 +456,7 @@ export class CampaignService {
     }
 
     // Find optimal youtuber combination
-    const { youtubers, totalCost } = await this.findOptimalYoutuberCombination(data.targetViews);
+    const { youtubers, totalCost, amountInPaisa } = await this.findOptimalYoutuberCombination(data.targetViews);
 
     // Calculate the exact amount in paise for Razorpay (integer)
     const amountInPaise = Math.round(totalCost * 100);
@@ -475,7 +480,7 @@ export class CampaignService {
 
       // Create Order in Razorpay with exact integer amount in paise
       const razorpayOrder = await razorpay.orders.create({
-        amount: amountInPaise, // Use the exact amount in paise
+        amount: amountInPaisa, // Use the exact amount in paise
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
         payment_capture: true
