@@ -414,26 +414,31 @@ export class CampaignService {
       throw new ApiError(400, 'Could not find a suitable combination of YouTubers');
     }
 
-    // Use EXACT values for calculations
+    // Use integer math to avoid floating point issues
+    // First convert all costs to paisa (integer) for calculations
+    let totalPaisa = 0;
+    const displayYoutubers = selectedYoutubers.map(y => {
+      // Convert each youtuber's cost to paisa
+      const costInPaisa = Math.round(y.cost * 100);
+      totalPaisa += costInPaisa;
+      
+      return {
+        ...y,
+        // Store the integer cost in paisa
+        costInPaisa, 
+        // For display purposes, convert back to currency with 2 decimals
+        cost: costInPaisa / 100
+      };
+    });
+
     const totalViewsExact = selectedYoutubers.reduce((sum, y) => sum + y.expectedViews, 0);
-    
-    // Calculate the total cost and convert to a clean integer in paisa to avoid floating point issues
-    const totalCostRaw = selectedYoutubers.reduce((sum, y) => sum + y.cost, 0);
-    const totalCostInPaisa = Math.round(totalCostRaw * 100);
-    const totalCostExact = totalCostInPaisa / 100; // Convert back to currency units as a clean value
-    
-    // For display in the UI, create rounded versions of the costs
-    const displayYoutubers = selectedYoutubers.map(y => ({
-      ...y,
-      cost: Math.round(y.cost * 100) / 100, // Round to 2 decimal places for display only
-    }));
+    const totalCostExact = totalPaisa / 100; // This is the exact amount in currency units
 
     return {
       youtubers: displayYoutubers,
       totalViews: totalViewsExact,
-      totalCost: totalCostExact, // Clean value without floating point errors
-      displayCost: Math.round(totalCostExact * 100) / 100, // Rounded for display
-      amountInPaisa: totalCostInPaisa // Store exact paisa amount to use for Razorpay
+      totalCost: totalCostExact, 
+      amountInPaisa: totalPaisa // This is the EXACT integer for Razorpay
     };
   }
 
@@ -458,8 +463,7 @@ export class CampaignService {
     // Find optimal youtuber combination
     const { youtubers, totalCost, amountInPaisa } = await this.findOptimalYoutuberCombination(data.targetViews);
 
-    // Calculate the exact amount in paise for Razorpay (integer)
-    const amountInPaise = Math.round(totalCost * 100);
+    // REMOVED the second calculation of amountInPaise
 
     return prisma.$transaction(async (prisma) => {
       // Create the campaign
@@ -467,7 +471,7 @@ export class CampaignService {
         data: {
           name: data.name,
           description: data.description,
-          budget: totalCost,
+          budget: totalCost, // Use the exact calculated amount
           targetViews: data.targetViews,
           companyId: data.companyId,
           status: 'ACTIVE',
@@ -478,9 +482,9 @@ export class CampaignService {
         },
       });
 
-      // Create Order in Razorpay with exact integer amount in paise
+      // Create Order in Razorpay with the EXACT integer amount
       const razorpayOrder = await razorpay.orders.create({
-        amount: amountInPaisa, // Use the exact amount in paise
+        amount: amountInPaisa, // Use the pre-calculated exact integer
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
         payment_capture: true
@@ -490,7 +494,8 @@ export class CampaignService {
       const payments = await Promise.all(youtubers.map(youtuber => 
         prisma.payment.create({
           data: {
-            amount: youtuber.cost,
+            // Use the exact cost for each youtuber (retrieve from costInPaisa)
+            amount: youtuber.costInPaisa ? youtuber.costInPaisa / 100 : youtuber.cost,
             companyId: data.companyId,
             youtuberId: youtuber.id,
             campaignId: campaign.id,
