@@ -193,7 +193,7 @@ export class CampaignController {
 
   static async createOptimalCampaign(req: Request, res: Response) {
     try {
-      const { name, description, targetViews, companyId, videoUrl, brandLink } = req.body;
+      const { name, description, targetViews, companyId, videoUrl } = req.body;
       
       // Validate required fields
       if (!name || !targetViews || !companyId || !videoUrl) {
@@ -211,7 +211,6 @@ export class CampaignController {
         targetViews,
         companyId,
         videoUrl,
-        brandLink
       });
 
       res.json({ success: true, data: result });
