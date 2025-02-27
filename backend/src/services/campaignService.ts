@@ -85,13 +85,42 @@ export class CampaignService {
   }
 
   static async getCampaignsByCompany(companyId: string) {
-    return prisma.campaign.findMany({
+    // Get campaigns with their youtubers
+    const campaigns = await prisma.campaign.findMany({
       where: { companyId },
       include: {
         youtubers: true,
         donations: true
       }
     });
+  
+    // For each campaign, calculate total clicks
+    const campaignsWithClicks = await Promise.all(
+      campaigns.map(async (campaign) => {
+        // Get all youtuber IDs for this campaign
+        const youtuberIds = campaign.youtubers.map(y => y.id);
+  
+        // Get total clicks for all messages from these youtubers
+        const totalClicks = await prisma.chatMessage.aggregate({
+          where: {
+            youtuberId: {
+              in: youtuberIds
+            }
+          },
+          _sum: {
+            clicks: true
+          }
+        });
+  
+        // Return campaign with added clicks data
+        return {
+          ...campaign,
+          totalClicks: totalClicks._sum.clicks || 0
+        };
+      })
+    );
+  
+    return campaignsWithClicks;
   }
 
   static async updateCampaignStatus(id: string, status: Campaign['status']) {
