@@ -298,6 +298,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
     });
 
     let videoUploadStatus = null;
+    console.log('Uploading video',videoData.url, payment.playsNeeded)
     
     // Handle video upload separately if payment is at least in processing state
     if (videoData?.url && payment.playsNeeded > 0) {
@@ -306,8 +307,8 @@ export const verifyPayment = async (req: Request, res: Response) => {
           payment.youtuberId,
           {
             url: videoData.url,
-            paymentId: payment.id,
-            ...videoData
+            ...(payment.campaignId && { campaignId: payment.campaignId }),
+            paymentId: payment.id
           },
           payment.playsNeeded
         );

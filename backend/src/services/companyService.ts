@@ -101,7 +101,6 @@ export class CompanyService {
   static async calculateCampaignYoutubers(requiredViews: number, budget: number): Promise<ICampaignResult> {
     const youtubers = await prisma.youtuber.findMany({
       where: {
-        isLive: true,
         charge: { gt: 0 }
       },
       orderBy: { charge: 'asc' }
