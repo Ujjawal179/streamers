@@ -72,12 +72,11 @@ export class CompanyService {
   }
 
   static async uploadVideoToYoutubers(
-    youtuberIds: string[], 
-    videoData: { url: string }, 
-    playsNeeded = 1
+    selectedYoutubers: Array<{ youtuberId: string; playsNeeded: number }>,
+    videoData: IVideoUpload, 
   ) {
     return Promise.all(
-      youtuberIds.map(youtuberId => 
+      selectedYoutubers.map(({ youtuberId, playsNeeded }) => 
         VideoQueueService.addToYoutuberQueue(youtuberId, {
           ...videoData,
           playNumber: 1,
@@ -244,14 +243,17 @@ export class CompanyService {
     videoData: IVideoUpload, 
     playsNeeded: number
   ) {
-    const promises = Array(playsNeeded).fill(null).map((_, index) =>
-      VideoQueueService.addToYoutuberQueue(youtuberId, {
-        ...videoData,
-        playNumber: index + 1,
-        totalPlays: playsNeeded
-      })
-    );
-
+    const promises = [];
+    for (let i = 0; i < playsNeeded; i++) {
+      promises.push(
+        VideoQueueService.addToYoutuberQueue(youtuberId, {
+          ...videoData,
+          playNumber: i + 1,
+          totalPlays: playsNeeded,
+          playsNeeded
+        })
+      );
+    }
     return Promise.all(promises);
   }
 
@@ -262,7 +264,8 @@ export class CompanyService {
     return VideoQueueService.addToYoutuberQueue(youtuberId, {
       ...videoData,
       playNumber: 1,
-      totalPlays: videoData.totalPlays || videoData.playsNeeded || 1
+      totalPlays: 1,
+      playsNeeded: 1
     });
   }
 }

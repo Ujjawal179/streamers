@@ -7,6 +7,7 @@ import { CompanyService } from '../services/companyService';
 import { PaymentService } from '../services/paymentService';
 import { PaymentStatus } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
+import { VideoQueueService } from '../services/VideoQueueService';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
@@ -188,7 +189,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
       include: {
         youtuber: {
           include: {
-            user: true  // Include user data to get linked user details
+            user: true
           }
         },
         company: true
@@ -234,26 +235,13 @@ export const verifyPayment = async (req: Request, res: Response) => {
     const platformFee = Math.floor(Number(razorpayPayment.amount) * 0.3); // 30% platform fee
     const earnings = Number(razorpayPayment.amount) - platformFee;
 
+    let paymentStatus: PaymentStatus = PaymentStatus.PROCESSING;
+    let paymentMessage = 'Payment received but processing';
+
     // Verify YouTuber's bank details before attempting payout
     if (!payment.youtuber.bankVerified) {
-      await prisma.payment.update({
-        where: { orderId },
-        data: { 
-          status: PaymentStatus.PROCESSING,
-          transactionId: paymentId,
-          earnings,
-          platformFee
-        }
-      });
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Payment received but payout pending - Bank details not verified',
-        status: 'PROCESSING'
-      });
-    }
-
-    // Only attempt payout if bank details exist
-    if (payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode) {
+      paymentMessage = 'Payment received but payout pending - Bank details not verified';
+    } else if (payment.youtuber.bankName && payment.youtuber.accountNumber && payment.youtuber.ifscCode) {
       try {
         const payoutResponse = await axios.post(
           'https://api.razorpay.com/v1/payouts',
@@ -280,85 +268,320 @@ export const verifyPayment = async (req: Request, res: Response) => {
           }
         );
 
-        // Update payment status
-        await prisma.payment.update({
-          where: { orderId },
-          data: {
-            status: PaymentStatus.PAID,
-            transactionId: paymentId,
-            earnings,
-            platformFee
-          }
-        });
-
         // Update YouTuber's earnings
         await prisma.youtuber.update({
           where: { id: payment.youtuberId },
           data: {
             earnings: {
-              increment: earnings
+              increment: earnings / 100 // Convert back to base currency
             }
           }
         });
+
+        paymentStatus = PaymentStatus.PAID;
+        paymentMessage = 'Payment processed successfully';
       } catch (payoutError) {
         console.error('Payout failed:', payoutError);
-        await prisma.payment.update({
-          where: { orderId },
-          data: {
-            status: PaymentStatus.PROCESSING,
-            transactionId: paymentId,
-            earnings,
-            platformFee
-          }
-        });
-        return res.status(200).json({
-          success: true,
-          message: 'Payment received but payout failed - Will retry automatically',
-          status: 'PROCESSING'
-        });
+        paymentMessage = 'Payment received but payout failed - Will retry automatically';
       }
     }
 
-    // Handle video upload if payment is successful
-    try {
-      if (videoData && payment.playsNeeded > 1) {
-        await CompanyService.uploadVideoToYoutuberWithPlays(
+    // Update payment status regardless of video upload
+    await prisma.payment.update({
+      where: { orderId },
+      data: {
+        status: paymentStatus,
+        transactionId: paymentId,
+        earnings: earnings / 100, // Convert back to base currency
+        platformFee: platformFee / 100 // Convert back to base currency
+      }
+    });
+
+    let videoUploadStatus = null;
+    
+    // Handle video upload separately if payment is at least in processing state
+    if (videoData?.url && payment.playsNeeded > 0) {
+      try {
+        await VideoQueueService.uploadVideoToYoutuberWithPlays(
           payment.youtuberId,
           {
             url: videoData.url,
             paymentId: payment.id,
-            // Include other optional fields if available
             ...videoData
           },
           payment.playsNeeded
         );
-      } else if (videoData) {
-        await CompanyService.uploadVideoToYoutuber(payment.youtuberId, {
-          url: videoData.url,
-          paymentId: payment.id,
-          // Include other optional fields if available
-          ...videoData
-        });
+        videoUploadStatus = { success: true, message: 'Video uploaded successfully' };
+      } catch (error) {
+        console.error('Video upload error:', error);
+        videoUploadStatus = { success: false, message: 'Failed to upload video after payment' };
       }
-    } catch (error) {
-      console.error('Video upload error:', error);
-      throw new Error('Failed to upload video after payment');
     }
 
     res.json({
       success: true,
-      message: 'Payment processed successfully',
+      message: paymentMessage,
       payment: {
         orderId,
         paymentId,
-        status: PaymentStatus.PAID,
-        earnings,
-        platformFee
-      }
+        status: paymentStatus,
+        earnings: earnings / 100,
+        platformFee: platformFee / 100
+      },
+      videoUpload: videoUploadStatus
     });
   } catch (error) {
     console.error('Payment verification error:', error);
     res.status(500).json({ success: false, message: 'Failed to verify payment' });
+  }
+};
+
+export const verifyBulkPayment = async (req: Request, res: Response) => {
+  const { orderId, paymentId, signature, videoData } = req.body;
+
+  try {
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' });
+    }
+
+    // Find all payments with the given order ID
+    const payments = await prisma.payment.findMany({
+      where: { orderId: orderId },
+      include: {
+        youtuber: {
+          include: {
+            user: true
+          }
+        },
+        company: true,
+        campaign: true
+      }
+    });
+
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'No payments found for this order' });
+    }
+
+    // Verify signature
+    const text = orderId + '|' + paymentId;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .update(text)
+      .digest('hex');
+
+    if (signature !== expectedSignature) {
+      await prisma.payment.updateMany({
+        where: { orderId },
+        data: { 
+          status: PaymentStatus.FAILED,
+          transactionId: paymentId
+        }
+      });
+      return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+    }
+
+    // Verify payment status with Razorpay
+    const razorpayPayment = await razorpay.payments.fetch(paymentId);
+    if (razorpayPayment.status !== 'captured') {
+      await prisma.payment.updateMany({
+        where: { orderId },
+        data: { 
+          status: PaymentStatus.FAILED,
+          transactionId: paymentId
+        }
+      });
+      return res.status(400).json({ success: false, message: 'Payment not captured' });
+    }
+
+    // Calculate total amount for verification
+    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0) * 100; // Convert to paise
+    if (totalAmount !== Number(razorpayPayment.amount)) {
+      console.error(`Amount mismatch: expected ${totalAmount}, received ${razorpayPayment.amount}`);
+      return res.status(400).json({ success: false, message: 'Payment amount does not match order total' });
+    }
+
+    // Get campaign details for video upload if available
+    const campaignId = payments[0].campaignId;
+    let campaignDetails = null;
+    
+    if (campaignId) {
+      campaignDetails = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { brandLink: true, description: true, name: true }
+      });
+    }
+
+    // Process each payment
+    const results = await Promise.all(payments.map(async (payment) => {
+      // Calculate platform fee and earnings for this specific payment
+      const paymentAmount = payment.amount * 100; // Convert to paise
+      const paymentShare = paymentAmount / totalAmount;
+      const paymentAmountReceived = Math.floor(Number(razorpayPayment.amount) * paymentShare);
+      const platformFee = Math.floor(paymentAmountReceived * 0.3); // 30% platform fee
+      const earnings = paymentAmountReceived - platformFee;
+      
+      try {
+        // If YouTuber's bank is verified, attempt payout
+        if (payment.youtuber.bankVerified && 
+            payment.youtuber.bankName && 
+            payment.youtuber.accountNumber && 
+            payment.youtuber.ifscCode) {
+          try {
+            const payoutResponse = await axios.post(
+              'https://api.razorpay.com/v1/payouts',
+              {
+                account_number: process.env.RAZORPAY_ACCOUNT_NUMBER,
+                fund_account_id: payment.youtuber.accountNumber,
+                amount: earnings,
+                currency: razorpayPayment.currency,
+                mode: 'IMPS',
+                purpose: 'payout',
+                queue_if_low_balance: true,
+                reference_id: `payout_${orderId}_${payment.id}`,
+                narration: `Payout for order ${orderId}`
+              },
+              {
+                headers: {
+                  'X-Payout-Idempotency': crypto.randomUUID(),
+                  'Content-Type': 'application/json'
+                },
+                auth: {
+                  username: process.env.RAZORPAY_KEY_ID || '',
+                  password: process.env.RAZORPAY_KEY_SECRET || ''
+                }
+              }
+            );
+
+            // Update YouTuber's earnings
+            await prisma.youtuber.update({
+              where: { id: payment.youtuberId },
+              data: {
+                earnings: {
+                  increment: earnings / 100 // Convert back to base currency
+                }
+              }
+            });
+
+            // Update payment status to PAID
+            await prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                status: PaymentStatus.PAID,
+                transactionId: paymentId,
+                earnings: earnings / 100, // Convert back to base currency
+                platformFee: platformFee / 100 // Convert back to base currency
+              }
+            });
+
+            // Upload videos if video data is provided
+            if (videoData && videoData.url && payment.playsNeeded > 0) {
+              // Prepare video message if campaign has brandLink
+              let message = null;
+              if (campaignDetails && campaignDetails.description) {
+                message = `${campaignDetails.description || 'Thank you for watching!'}`;
+              }
+
+              // Upload video to YouTuber's queue with optional campaign message
+              await VideoQueueService.uploadVideoToYoutuberWithPlays(
+                payment.youtuberId,
+                {
+                  url: videoData.url,
+                  paymentId: payment.id,
+                  campaignId: payment.campaignId,
+                  message,
+                  ...videoData
+                },
+                payment.playsNeeded
+              );
+
+              return { 
+                id: payment.id, 
+                status: payment.status, 
+                success: true,
+                videosUploaded: payment.playsNeeded
+              };
+            }
+
+            return { id: payment.id, status: 'PAID', success: true };
+          } catch (payoutError) {
+            console.error(`Payout failed for payment ${payment.id}:`, payoutError);
+            
+            // Update payment to PROCESSING status
+            await prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                status: PaymentStatus.PROCESSING,
+                transactionId: paymentId,
+                earnings: earnings / 100,
+                platformFee: platformFee / 100
+              }
+            });
+            
+            return { id: payment.id, status: 'PROCESSING', error: 'Payout failed' };
+          }
+        } else {
+          // Bank details not verified or missing
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: PaymentStatus.PROCESSING,
+              transactionId: paymentId,
+              earnings: earnings / 100,
+              platformFee: platformFee / 100
+            }
+          });
+          
+          return { id: payment.id, status: 'PROCESSING', error: 'Bank details not verified' };
+        }
+      } catch (error) {
+        console.error(`Error processing payment ${payment.id}:`, error);
+
+        // Even if payment processing succeeds but video upload fails, 
+        // try to upload the videos separately and report the issue
+        try {
+          if (videoData && videoData.url && payment.playsNeeded > 0) {
+            console.log('Retrying video upload for payment:', payment.id);
+            await VideoQueueService.uploadVideoToYoutuberWithPlays(
+              payment.youtuberId,
+              {
+                url: videoData.url,
+                paymentId: payment.id,
+                campaignId: payment.campaignId,
+                ...videoData
+              },
+              payment.playsNeeded
+            );
+          }
+          
+          return { 
+            id: payment.id, 
+            status: payment.status || 'PROCESSING', 
+            success: true,
+            videoUploadRetry: true
+          };
+        } catch (videoError) {
+          console.error(`Video upload retry failed for payment ${payment.id}:`, videoError);
+          return { 
+            id: payment.id, 
+            status: 'PROCESSING', 
+            error: 'Video upload failed',
+            paymentProcessed: payment.status === 'PAID'
+          };
+        }
+      }
+    }));
+
+    res.json({
+      success: true,
+      message: 'Bulk payment processed',
+      orderId,
+      paymentId,
+      videosUploaded: results.reduce((sum, r) => sum + (r.videosUploaded || 0), 0),
+      results
+    });
+  } catch (error) {
+    console.error('Bulk payment verification error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify bulk payment' });
   }
 };
 
