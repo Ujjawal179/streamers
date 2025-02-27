@@ -343,39 +343,76 @@ export class CampaignService {
     });
   }
 
-  // New method to find optimal youtuber combinations
+  // Modified method to find optimal youtuber combinations using average views
   static async findOptimalYoutuberCombination(targetViews: number) {
     // 1. Fetch all active YouTubers with their stats
     const youtubers = await prisma.youtuber.findMany({
       where: { 
-        currentCCV: { gt: 0 } // Only consider YouTubers with views
+        averageViews: { gt: 0 } // Using averageViews instead of currentCCV
       },
       select: {
         id: true,
         name: true,
-        currentCCV: true, // Using currentCCV as average views per video
+        averageViews: true, // Using averageViews instead of currentCCV
         charge: true
       }
     });
 
+    // If no youtubers found with averageViews, try with currentCCV as fallback
     if (!youtubers.length) {
-      throw new ApiError(404, 'No active YouTubers found');
+      const fallbackYoutubers = await prisma.youtuber.findMany({
+        where: { 
+          currentCCV: { gt: 0 } 
+        },
+        select: {
+          id: true,
+          name: true,
+          currentCCV: true,
+          charge: true
+        }
+      });
+      
+      if (!fallbackYoutubers.length) {
+        throw new ApiError(404, 'No active YouTubers found with view data');
+      }
+      
+      // Map fallback youtubers using currentCCV as averageViews
+      const youtuberData: OptimalYoutuber[] = fallbackYoutubers
+        .map(y => ({
+          id: y.id,
+          name: y.name,
+          averageViews: y.currentCCV || 0,
+          charge: y.charge || 0,
+          playsNeeded: 0,
+          expectedViews: 0,
+          cost: 0,
+          costPerView: y.currentCCV && y.currentCCV > 0 ? y.charge / y.currentCCV : Infinity
+        }))
+        .sort((a, b) => a.costPerView - b.costPerView);
+        
+      // Rest of the algorithm remains the same
+      return this.calculateOptimalCombination(youtuberData, targetViews);
     }
 
-    // 2. Calculate cost per view for each YouTuber and sort by efficiency (cost per view)
+    // 2. Calculate cost per view for each YouTuber and sort by efficiency
     const youtuberData: OptimalYoutuber[] = youtubers
       .map(y => ({
         id: y.id,
         name: y.name,
-        averageViews: y.currentCCV || 0,
+        averageViews: y.averageViews || 0,
         charge: y.charge || 0,
         playsNeeded: 0,
         expectedViews: 0,
         cost: 0,
-        costPerView: y.currentCCV && y.currentCCV > 0 ? y.charge / y.currentCCV : Infinity
+        costPerView: y.averageViews && y.averageViews > 0 ? y.charge / y.averageViews : Infinity
       }))
       .sort((a, b) => a.costPerView - b.costPerView); // Sort by cost efficiency
 
+    return this.calculateOptimalCombination(youtuberData, targetViews);
+  }
+
+  // Helper method to calculate optimal combination (extracted to avoid code duplication)
+  private static calculateOptimalCombination(youtuberData: OptimalYoutuber[], targetViews: number) {
     // 3. Greedy algorithm to select YouTubers
     let remainingViews = targetViews;
     let totalCost = 0;
