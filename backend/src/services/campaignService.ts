@@ -85,44 +85,51 @@ export class CampaignService {
   }
 
   static async getCampaignsByCompany(companyId: string) {
-    // Get campaigns with their youtubers
+    // Step 1: Fetch all campaigns and their youtubers in one query
     const campaigns = await prisma.campaign.findMany({
       where: { companyId },
       include: {
-        youtubers: true,
+        youtubers: {
+          select: { id: true } // Only fetch youtuber IDs to reduce data
+        },
         donations: true
       }
     });
   
-    // For each campaign, calculate total clicks
-    const campaignsWithClicks = await Promise.all(
-      campaigns.map(async (campaign) => {
-        // Get all youtuber IDs for this campaign
-        const youtuberIds = campaign.youtubers.map(y => y.id);
-  
-        // Get total clicks for all messages from these youtubers
-        const totalClicks = await prisma.chatMessage.aggregate({
-          where: {
-            youtuberId: {
-              in: youtuberIds
-            }
-          },
-          _sum: {
-            clicks: true
-          }
-        });
-  
-        // Return campaign with added clicks data
-        return {
-          ...campaign,
-          totalClicks: totalClicks._sum.clicks || 0
-        };
-      })
+    // Step 2: Collect all youtuber IDs across all campaigns
+    const allYoutuberIds = campaigns.flatMap(campaign => 
+      campaign.youtubers.map(y => y.id)
     );
+  
+    // Step 3: Fetch click totals for all youtubers in one query
+    const clickTotals = await prisma.chatMessage.groupBy({
+      by: ['youtuberId'],
+      where: {
+        youtuberId: {
+          in: allYoutuberIds
+        }
+      },
+      _sum: {
+        clicks: true
+      }
+    });
+  
+    // Step 4: Map click totals to campaigns
+    const clickMap = new Map(clickTotals.map(t => [t.youtuberId, t._sum.clicks || 0]));
+  
+    // Step 5: Combine results
+    const campaignsWithClicks = campaigns.map(campaign => {
+      const totalClicks = campaign.youtubers.reduce((sum, youtuber) => {
+        return sum + (clickMap.get(youtuber.id) || 0);
+      }, 0);
+      return {
+        ...campaign,
+        totalClicks
+      };
+    });
   
     return campaignsWithClicks;
   }
-
   static async updateCampaignStatus(id: string, status: Campaign['status']) {
     return prisma.campaign.update({
       where: { id },
