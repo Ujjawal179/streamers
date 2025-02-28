@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const videoController_1 = require("../controllers/videoController");
+const cloudinary_1 = require("../utils/cloudinary");
+const router = (0, express_1.Router)();
+router.post('/campaign/:companyId', auth_1.authenticateCompany, videoController_1.VideoController.uploadCampaignVideo);
+router.post('/direct/:youtuberId', auth_1.authenticateCompany, videoController_1.VideoController.uploadDirectVideo);
+router.get('/queue/:youtuberId/next', auth_1.authenticateCompany, videoController_1.VideoController.getNextVideo);
+router.get('/video/:youtuberId/:pin', videoController_1.VideoController.getVideoByPin);
+router.get('/get-signature', cloudinary_1.getCloudinarySignature);
+router.get('/length/:youtuberId', videoController_1.VideoController.getQueueLength);
+// router.delete('/video/:youtuberId', authenticateCompany, VideoController.removeCurrentVideo);
+exports.default = router;

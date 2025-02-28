@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+const donationController_1 = require("../controllers/donationController");
+router.post('/', auth_1.auth, donationController_1.DonationController.createDonation);
+router.get('/youtuber/:youtuberId', auth_1.auth, donationController_1.DonationController.getYoutuberDonations);
+router.get('/youtuber/:youtuberId/next', auth_1.auth, donationController_1.DonationController.getNextDonation);
+router.put('/:id/status', auth_1.auth, donationController_1.DonationController.updateDonationStatus);
+router.get('/campaign/:campaignId', auth_1.auth, donationController_1.DonationController.getDonationsByCampaign);
+exports.default = router;

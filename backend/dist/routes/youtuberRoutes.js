@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+const youtuberController_1 = require("../controllers/youtuberController");
+router.put('/:id', auth_1.auth, youtuberController_1.YoutuberController.updateYoutuber);
+router.get('/:id/username', youtuberController_1.YoutuberController.getUsername);
+router.get('/:id', youtuberController_1.YoutuberController.getYoutuberDetails);
+router.put('/:id/settings', auth_1.auth, youtuberController_1.YoutuberController.updateSettings);
+router.get('/:id/campaigns', auth_1.auth, youtuberController_1.YoutuberController.getYoutuberCampaigns);
+router.delete('/:id', auth_1.auth, youtuberController_1.YoutuberController.deleteYoutuber);
+router.post('/:id/viewers', auth_1.auth, youtuberController_1.YoutuberController.updateViewerCount);
+exports.default = router;
